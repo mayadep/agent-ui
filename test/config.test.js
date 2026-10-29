@@ -96,7 +96,7 @@ test("기본값, projects-root 미검사, DEFAULTS 불변", async () => {
   assert.equal(d.host, "127.0.0.1");
   assert.equal(typeof d.projectsRoot, "string");
   assert.ok(d.projectsRoot.length > 0);
-  assert.deepEqual(d.judgeAgentTypes, ["judge", "reviewer", "verifier", "tester"]);
+  assert.deepEqual(d.judgeAgentTypes, ["judge", "reviewer", "verifier", "tester", "security-reviewer"]);
   assert.equal(loadConfig(["--projects-root", "Z:/does/not/exist"]).projectsRoot, "Z:/does/not/exist");
 });
 

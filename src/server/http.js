@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { listSessions, sessionFiles, isValidProjectKey, isValidSessionId } from "../core/paths.js";
 import { getWatcher } from "../core/session-watcher.js";
 import { LimitsReader, defaultLimitsFile } from "../core/limits.js";
+import { listAgents, defaultAgentsDir } from "../core/agents.js";
 
 const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public");
 const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html" };
@@ -103,6 +104,9 @@ export function createServer(cfg) {
         const first = listSessions(root, 1)[0];
         if (!first) return sendJson(res, 404, { error: "no sessions" });
         return sendJson(res, 200, { projectKey: first.projectKey, sessionId: first.sessionId });
+      }
+      if (seg[1] === "agents" && seg.length === 2) {
+        return sendJson(res, 200, { agents: listAgents(cfg.agentsDir ?? defaultAgentsDir(), cfg.judgeAgentTypes) });
       }
       if (seg[1] === "limits" && seg.length === 2) return sendJson(res, 200, limitsReader.read());
       if (seg[1] === "run" && (seg.length === 4 || (seg.length === 5 && seg[4] === "stream"))) {

@@ -51,6 +51,15 @@ body {
 .g-label { color: var(--dim); }
 .g-sub { color: var(--dim); font-size: 12px; word-break: break-word; }
 .g-judge { margin-top: 10px; color: var(--c-judge); }
+.g-agents { margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.g-agents-head { display: flex; justify-content: space-between; align-items: center; color: var(--dim); letter-spacing: 0.08em; font-size: 12px; margin-bottom: 4px; }
+.g-toggle { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 3px; width: 22px; height: 22px; line-height: 1; font: inherit; cursor: pointer; }
+.g-toggle:hover { border-color: var(--dim); }
+.ag-list[hidden] { display: none; }
+.ag-row { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; cursor: default; }
+.ag-name.ag-judge { color: var(--c-judge); }
+.ag-name.ag-worker { color: var(--c-worker); }
+.ag-model { font-size: 12px; }
 .v-done { color: var(--c-worker); }
 .v-failed { color: var(--fail); }
 .v-running { color: var(--c-goal); }

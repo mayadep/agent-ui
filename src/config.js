@@ -1,5 +1,6 @@
 import { defaultProjectsRoot } from "./core/paths.js";
 import { defaultLimitsFile } from "./core/limits.js";
+import { defaultAgentsDir } from "./core/agents.js";
 
 export const DEFAULTS = {
   host: "127.0.0.1",
@@ -11,8 +12,9 @@ export const DEFAULTS = {
   idleWatcherMs: 60 * 1000,
   maxEvents: 2000,
   snapshotEvents: 300,
-  judgeAgentTypes: ["judge", "reviewer", "verifier", "tester"],
+  judgeAgentTypes: ["judge", "reviewer", "verifier", "tester", "security-reviewer"],
   limitsFile: null, // null → defaultLimitsFile() (CLI 옵션 없음, 경로 고정)
+  agentsDir: null, // null → defaultAgentsDir() (CLI 옵션 없음, 경로 고정)
 };
 
 const LOOPBACK_HOSTS = ["127.0.0.1", "localhost", "::1"];
@@ -58,5 +60,6 @@ export function loadConfig(argv = []) {
   }
   if (cfg.projectsRoot === null) cfg.projectsRoot = defaultProjectsRoot();
   if (cfg.limitsFile === null) cfg.limitsFile = defaultLimitsFile();
+  if (cfg.agentsDir === null) cfg.agentsDir = defaultAgentsDir();
   return cfg;
 }

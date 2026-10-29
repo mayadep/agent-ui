@@ -18,7 +18,9 @@ const subDir = path.join(tmpRoot, "D--demo", SID, "subagents");
 let server;
 let base;
 const limitsFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "agent-ui-limhttp-")), "rate-limits.json");
-const cfg = { ...DEFAULTS, projectsRoot: tmpRoot, limitsFile, pollMs: 100, pushThrottleMs: 50, idleWatcherMs: 500 };
+const agentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "agent-ui-agentshttp-"));
+fs.writeFileSync(path.join(agentsDir, "reviewer.md"), "---\nname: reviewer\nmodel: claude-opus-5-5\n---\n");
+const cfg = { ...DEFAULTS, projectsRoot: tmpRoot, limitsFile, agentsDir, pollMs: 100, pushThrottleMs: 50, idleWatcherMs: 500 };
 
 before(async () => {
   server = createServer(cfg);
@@ -104,6 +106,14 @@ test("invalid and missing sessions", async () => {
   assert.equal((await getJson(`/api/run/..%2F/${SID}`)).status, 400);
   assert.equal((await getJson(`/api/run/D--demo/22222222-2222-4222-8222-222222222222`)).status, 404);
   assert.equal((await getJson(`/api/run/Nope/${SID}`)).status, 404);
+});
+
+test("GET /api/agents lists registered agents", async () => {
+  const r = await getJson("/api/agents");
+  assert.equal(r.status, 200);
+  assert.equal(r.body.agents.length, 1);
+  assert.equal(r.body.agents[0].name, "reviewer");
+  assert.equal(r.body.agents[0].role, "judge");
 });
 
 test("static serving and traversal", async () => {

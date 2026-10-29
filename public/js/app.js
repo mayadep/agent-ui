@@ -10,6 +10,7 @@ const els = { header: $("header"), goal: $("goal"), flow: $("flow"), log: $("log
 let state = { run: null, events: [] };
 let source = null;
 let limitsResp = { status: "loading", limits: null };
+let agents = null; // null → 아직 못 받음(패널 생략)
 
 function setConn(text, ok) {
   els.conn.textContent = text;
@@ -18,7 +19,7 @@ function setConn(text, ok) {
 
 function renderTick() {
   if (!state.run) return;
-  renderGoal(els.goal, state.run, Date.now(), limitsResp);
+  renderGoal(els.goal, state.run, Date.now(), limitsResp, agents);
   renderFlow(els.flow, state.run, Date.now());
 }
 
@@ -69,6 +70,16 @@ async function pollLimits() {
   renderTick();
 }
 
+async function loadAgents() {
+  try {
+    const r = await fetch("/api/agents");
+    if (r.ok) agents = (await r.json()).agents;
+  } catch {
+    /* 목록 실패는 치명적이지 않음 */
+  }
+  renderTick();
+}
+
 async function fillSelect(p, s) {
   try {
     const r = await fetch("/api/sessions");
@@ -107,6 +118,7 @@ async function main() {
   }
   fillSelect(p, s);
   connect(p, s);
+  loadAgents();
   pollLimits();
   setInterval(pollLimits, LIMITS_POLL_MS);
   setInterval(renderTick, 1000);

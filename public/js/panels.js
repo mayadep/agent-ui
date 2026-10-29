@@ -29,7 +29,7 @@ function row(label, value, cls) {
   return r;
 }
 
-export function renderGoal(el, run, nowMs, limitsResp) {
+export function renderGoal(el, run, nowMs, limitsResp, agents) {
   const main = run.nodes[0];
   const kids = [];
   kids.push(h("div", "g-head", "THE GOAL"));
@@ -57,5 +57,45 @@ export function renderGoal(el, run, nowMs, limitsResp) {
 
   const judge = run.verdict.judgeId ? run.nodes.find((n) => n.id === run.verdict.judgeId) : null;
   kids.push(h("div", "g-judge", judge ? `judge: ${judge.model ? judge.model.label : "model n/a"} · ${judge.agentType ?? "n/a"}` : "judge: n/a"));
+  if (agents) kids.push(buildAgents(agents));
   el.replaceChildren(...kids);
+}
+
+// 접힘 상태는 1초마다 다시 그려도 유지되도록 모듈에 두고, 새로고침 후에도 localStorage 로 기억한다.
+const COLLAPSE_KEY = "agent-ui.agentsCollapsed";
+let agentsCollapsed = false;
+try { agentsCollapsed = localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { /* 저장소 없음 */ }
+
+// 사용자가 등록한 에이전트 목록(역할 색 + 모델 + 설명 툴팁). +/- 버튼으로 접고 편다.
+function buildAgents(agents) {
+  const box = h("div", "g-agents");
+  const head = h("div", "g-agents-head");
+  const btn = h("button", "g-toggle", agentsCollapsed ? "+" : "−");
+  btn.type = "button";
+  btn.title = agentsCollapsed ? "펼치기" : "접기";
+  btn.setAttribute("aria-expanded", String(!agentsCollapsed));
+  btn.addEventListener("click", () => {
+    agentsCollapsed = !agentsCollapsed;
+    try { localStorage.setItem(COLLAPSE_KEY, agentsCollapsed ? "1" : "0"); } catch { /* 저장 실패는 무시 */ }
+    const list = box.querySelector(".ag-list");
+    if (list) list.hidden = agentsCollapsed;
+    btn.textContent = agentsCollapsed ? "+" : "−";
+    btn.title = agentsCollapsed ? "펼치기" : "접기";
+    btn.setAttribute("aria-expanded", String(!agentsCollapsed));
+  });
+  head.append(h("span", null, `REGISTERED AGENTS (${agents.length})`), btn);
+  box.append(head);
+  const list = h("div", "ag-list");
+  list.hidden = agentsCollapsed;
+  if (agents.length === 0) list.append(h("div", "g-sub", "none"));
+  for (const a of agents) {
+    const r = h("div", "ag-row");
+    r.title = a.description;
+    const name = h("span", `ag-name ag-${a.role}`, a.name);
+    const model = h("span", `ag-model m-${a.model ? a.model.family : "unknown"}`, a.model ? a.model.label : "inherit");
+    r.append(name, model);
+    list.append(r);
+  }
+  box.append(list);
+  return box;
 }
