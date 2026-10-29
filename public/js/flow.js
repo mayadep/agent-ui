@@ -48,7 +48,6 @@ function buildMain(parent) {
   return {
     box,
     set(node, run, nowMs) {
-      title.textContent = "main agent";
       modelBadge(badge, node.model);
       activity.textContent = node.activity ?? "—";
       const started = run.startedAt ? fmtElapsed(nowMs - Date.parse(run.startedAt)) : "—";
@@ -154,6 +153,10 @@ function rebuild(container, run) {
   return refs;
 }
 
+function centerX(r) {
+  return r.left + r.width / 2;
+}
+
 function layoutLinks(container, refs) {
   const cr = container.getBoundingClientRect();
   refs.svg.setAttribute("width", String(container.scrollWidth));
@@ -164,15 +167,15 @@ function layoutLinks(container, refs) {
     const b = l.to.getBoundingClientRect();
     if (l.from === refs.usageBox) {
       // 줄바꿈으로 아래 줄에 내려간 카드는 usage 가 아니라 바로 위 줄의 가장 가까운 카드에서 선을 이어 카드를 가로지르지 않게 한다.
-      const cx = b.left + b.width / 2;
+      const cx = centerX(b);
       const upper = cards.filter((r) => r.bottom <= b.top + 1 && r.top < b.top - 1);
       const rowBottom = Math.max(...upper.map((r) => r.bottom));
       const above = upper.filter((r) => Math.abs(r.bottom - rowBottom) <= 1); // 바로 위 줄만
-      if (above.length) a = above.reduce((m, r) => (Math.abs(r.left + r.width / 2 - cx) < Math.abs(m.left + m.width / 2 - cx) ? r : m));
+      if (above.length) a = above.reduce((m, r) => (Math.abs(centerX(r) - cx) < Math.abs(centerX(m) - cx) ? r : m));
     }
-    const x1 = a.left + a.width / 2 - cr.left + container.scrollLeft;
+    const x1 = centerX(a) - cr.left + container.scrollLeft;
     const y1 = a.bottom - cr.top + container.scrollTop;
-    const x2 = b.left + b.width / 2 - cr.left + container.scrollLeft;
+    const x2 = centerX(b) - cr.left + container.scrollLeft;
     const y2 = b.top - cr.top + container.scrollTop;
     const my = (y1 + y2) / 2;
     l.p.setAttribute("d", `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`);

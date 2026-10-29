@@ -70,18 +70,20 @@ try { agentsCollapsed = localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { /*
 function buildAgents(agents) {
   const box = h("div", "g-agents");
   const head = h("div", "g-agents-head");
-  const btn = h("button", "g-toggle", agentsCollapsed ? "+" : "−");
+  const btn = h("button", "g-toggle");
   btn.type = "button";
-  btn.title = agentsCollapsed ? "펼치기" : "접기";
-  btn.setAttribute("aria-expanded", String(!agentsCollapsed));
+  const syncToggle = () => {
+    btn.textContent = agentsCollapsed ? "+" : "−";
+    btn.title = agentsCollapsed ? "펼치기" : "접기";
+    btn.setAttribute("aria-expanded", String(!agentsCollapsed));
+  };
+  syncToggle();
   btn.addEventListener("click", () => {
     agentsCollapsed = !agentsCollapsed;
     try { localStorage.setItem(COLLAPSE_KEY, agentsCollapsed ? "1" : "0"); } catch { /* 저장 실패는 무시 */ }
     const list = box.querySelector(".ag-list");
     if (list) list.hidden = agentsCollapsed;
-    btn.textContent = agentsCollapsed ? "+" : "−";
-    btn.title = agentsCollapsed ? "펼치기" : "접기";
-    btn.setAttribute("aria-expanded", String(!agentsCollapsed));
+    syncToggle();
   });
   head.append(h("span", null, `REGISTERED AGENTS (${agents.length})`), btn);
   box.append(head);
@@ -91,9 +93,10 @@ function buildAgents(agents) {
   for (const a of agents) {
     const r = h("div", "ag-row");
     r.title = a.description;
-    const name = h("span", `ag-name ag-${a.role}`, a.name);
-    const model = h("span", `ag-model m-${a.model ? a.model.family : "unknown"}`, a.model ? a.model.label : "inherit");
-    r.append(name, model);
+    r.append(
+      h("span", `ag-name ag-${a.role}`, a.name),
+      h("span", `ag-model m-${a.model ? a.model.family : "unknown"}`, a.model ? a.model.label : "inherit"),
+    );
     list.append(r);
   }
   box.append(list);

@@ -53,6 +53,12 @@ function connect(p, s) {
 }
 
 const LIMIT_STATUSES = ["ok", "missing", "invalid"];
+const sessionQuery = (p, s) => `?p=${encodeURIComponent(p)}&s=${encodeURIComponent(s)}`;
+
+// 마지막 정상 값은 유지(신선도 표시가 처리)하고, 그 외에는 error 로 둔다.
+function markLimitsError() {
+  if (limitsResp.status !== "ok") limitsResp = { status: "error", limits: null };
+}
 
 async function pollLimits() {
   try {
@@ -60,12 +66,11 @@ async function pollLimits() {
     const body = r.ok ? await r.json() : null;
     if (body && LIMIT_STATUSES.includes(body.status)) {
       limitsResp = { status: body.status, limits: body.limits ?? null };
-    } else if (limitsResp.status !== "ok") {
-      limitsResp = { status: "error", limits: null };
+    } else {
+      markLimitsError();
     }
   } catch {
-    // 실패 시 마지막 정상 값은 유지(신선도 표시가 처리), 그 외에는 error
-    if (limitsResp.status !== "ok") limitsResp = { status: "error", limits: null };
+    markLimitsError();
   }
   renderTick();
 }
@@ -99,7 +104,7 @@ async function fillSelect(p, s) {
 
 els.select.addEventListener("change", () => {
   const [p, s] = els.select.value.split("|");
-  location.search = `?p=${encodeURIComponent(p)}&s=${encodeURIComponent(s)}`;
+  location.search = sessionQuery(p, s);
 });
 
 async function main() {
@@ -114,7 +119,7 @@ async function main() {
       return;
     }
     ({ projectKey: p, sessionId: s } = await r.json());
-    history.replaceState(null, "", `?p=${encodeURIComponent(p)}&s=${encodeURIComponent(s)}`);
+    history.replaceState(null, "", sessionQuery(p, s));
   }
   fillSelect(p, s);
   connect(p, s);
