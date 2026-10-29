@@ -7,14 +7,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 // 그 외에는 제자리 갱신해서 CSS 애니메이션이 매초 끊기지 않게 한다.
 function signature(run) {
   const ids = run.nodes.map((n) => `${n.id}:${n.role}`).join(",");
-  return `${ids}|${run.verdict.judgeId}|${run.modelUsage.map((m) => m.label).join(",")}`;
-}
-
-// 최종 judge 노드와 그 이전 judge 수(순수 함수, DOM 불필요)
-export function pickJudge(run) {
-  const latest = run.verdict.judgeId ? run.nodes.find((n) => n.id === run.verdict.judgeId) ?? null : null;
-  const total = run.nodes.filter((n) => n.role === "judge").length;
-  return { latest, previous: total - (latest ? 1 : 0) };
+  return `${ids}|${run.modelUsage.map((m) => m.label).join(",")}`;
 }
 
 function el(parent, tag, cls, text) {
@@ -91,28 +84,6 @@ function buildWorker(parent) {
   };
 }
 
-function buildJudge(parent, previous) {
-  const box = el(parent, "div", "box judge");
-  const head = el(box, "div", "box-head");
-  const title = el(head, "span", "box-title", "judge");
-  const badge = el(head, "span", "badge");
-  const after = el(box, "div", "box-meta");
-  const verdict = el(box, "div", "box-activity");
-  const prev = el(box, "div", "box-meta");
-  return {
-    box,
-    set(node, run, nowMs) {
-      title.textContent = node.agentType ?? "judge";
-      modelBadge(badge, node.model);
-      after.textContent = `after turn ${node.spawnedAtMainTurn ?? "n/a"}`;
-      const v = run.verdict;
-      verdict.textContent = v.text ? `${v.status}: ${v.text}` : v.status;
-      prev.textContent = previous > 0 ? `previous: ${previous}` : "";
-      box.className = `box judge ${statusClass(node.status)}`;
-    },
-  };
-}
-
 function buildUsage(parent, labels) {
   const box = el(parent, "div", "box usage");
   el(box, "div", "box-head").append(h("span", "box-title", "model usage"));
@@ -152,8 +123,8 @@ function rebuild(container, run) {
   container.replaceChildren();
   const refs = { sig: signature(run), items: new Map(), links: [], svg: null };
   const mainNode = run.nodes[0];
-  const { latest: latestJudge, previous } = pickJudge(run);
-  const workers = run.nodes.filter((n) => n.role === "worker");
+  // judge(reviewer 등)도 워커와 같은 카드로, 실행마다 하나씩 그린다(역할 색만 다름).
+  const workers = run.nodes.filter((n) => n.role !== "main");
 
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("class", "links");
@@ -167,6 +138,7 @@ function rebuild(container, run) {
   const rowUsage = el(container, "div", "flow-row");
   const usage = buildUsage(rowUsage, run.modelUsage.map((m) => m.label));
   refs.usage = usage;
+  refs.usageBox = usage.box;
 
   const rowWorkers = el(container, "div", "flow-row workers");
   if (workers.length === 0) {
@@ -174,18 +146,10 @@ function rebuild(container, run) {
   }
   for (const n of workers) refs.items.set(n.id, buildWorker(rowWorkers));
 
-  const rowJudge = el(container, "div", "flow-row");
-  if (latestJudge) {
-    refs.items.set(latestJudge.id, buildJudge(rowJudge, previous));
-  } else {
-    el(rowJudge, "div", "box judge dim", "judge: n/a");
-  }
-
-  // 연결선: 메인→usage, usage→워커, 워커→judge(judge 없으면 생략). 도착 노드 상태로 애니메이션.
+  // 연결선: 메인→usage, usage→워커/judge 카드. 도착 노드 상태로 애니메이션.
   refs.links.push({ from: main.box, to: usage.box, nodeId: mainNode.id, p: path(svg, "link") });
   for (const n of workers) {
     refs.links.push({ from: usage.box, to: refs.items.get(n.id).box, nodeId: n.id, p: path(svg, "link") });
-    if (latestJudge) refs.links.push({ from: refs.items.get(n.id).box, to: refs.items.get(latestJudge.id).box, nodeId: latestJudge.id, p: path(svg, "link") });
   }
   return refs;
 }
@@ -194,9 +158,16 @@ function layoutLinks(container, refs) {
   const cr = container.getBoundingClientRect();
   refs.svg.setAttribute("width", String(container.scrollWidth));
   refs.svg.setAttribute("height", String(container.scrollHeight));
+  const cards = refs.links.filter((l) => l.from === refs.usageBox).map((l) => l.to.getBoundingClientRect());
   for (const l of refs.links) {
-    const a = l.from.getBoundingClientRect();
+    let a = l.from.getBoundingClientRect();
     const b = l.to.getBoundingClientRect();
+    if (l.from === refs.usageBox) {
+      // 줄바꿈으로 아래 줄에 내려간 카드는 usage 가 아니라 바로 위 줄의 가장 가까운 카드에서 선을 이어 카드를 가로지르지 않게 한다.
+      const cx = b.left + b.width / 2;
+      const above = cards.filter((r) => r.bottom <= b.top + 1 && r.top < b.top - 1);
+      if (above.length) a = above.reduce((m, r) => (Math.abs(r.left + r.width / 2 - cx) < Math.abs(m.left + m.width / 2 - cx) ? r : m));
+    }
     const x1 = a.left + a.width / 2 - cr.left + container.scrollLeft;
     const y1 = a.bottom - cr.top + container.scrollTop;
     const x2 = b.left + b.width / 2 - cr.left + container.scrollLeft;

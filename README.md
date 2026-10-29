@@ -17,7 +17,7 @@ npm start
 | `--port` | 8770 | 0~65535 정수 (숫자만, `80abc`·`1e3` 거부) |
 | `--host` | 127.0.0.1 | 루프백만 허용: `127.0.0.1`, `localhost`, `::1` |
 | `--projects-root` | `~/.claude/projects` | 문자열 경로 |
-| `--judge-types` | `judge,reviewer,verifier` | 쉼표 구분 agentType 목록 (judge 박스로 분류) |
+| `--judge-types` | `judge,reviewer,verifier,tester` | 쉼표 구분 agentType 목록 (파란 judge 카드로 분류) |
 | `--poll-ms` | 750 | 1 ~ 2147483647 정수 |
 
 알 수 없는 옵션이나 잘못된 값은 오류 메시지와 함께 종료한다.
@@ -25,7 +25,7 @@ npm start
 ## 화면 구성
 - 헤더·범례: 세션 제목과 projectKey, 역할 색 범례(goal 주황, 메인 보라, judge 파랑, 워커 초록). 상단 선택 박스로 세션을 고른다.
 - THE GOAL 패널(좌측): 현재 turn·모델, 목표(첫 사람 프롬프트)와 latest, turns, tokens, 사용 한도, verdict, 실행 시간.
-- 플로우 다이어그램(중앙): main 에이전트 박스 → model usage(모델별 output 토큰 막대) → 워커 박스(실제 서브에이전트 수만큼) → judge 박스. 실행 중인 노드는 테두리가 빛나고 연결선에 점이 흐른다.
+- 플로우 다이어그램(중앙): main 에이전트 박스 → model usage(모델별 output 토큰 막대) → 서브에이전트 카드(워커·judge 모두 실행마다 하나씩, judge는 파란 테두리). 실행 중인 노드는 테두리가 빛나고 연결선에 점이 흐른다.
 - session log(하단): 이벤트를 시각 순으로 표시한다.
 - 모델 배지 글자색: opus 보라, sonnet 하늘, haiku 연두, 그 외 회색(원본 이름 표시). 박스 테두리는 모델이 아닌 역할 색이다.
 

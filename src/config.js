@@ -11,7 +11,7 @@ export const DEFAULTS = {
   idleWatcherMs: 60 * 1000,
   maxEvents: 2000,
   snapshotEvents: 300,
-  judgeAgentTypes: ["judge", "reviewer", "verifier"],
+  judgeAgentTypes: ["judge", "reviewer", "verifier", "tester"],
   limitsFile: null, // null → defaultLimitsFile() (CLI 옵션 없음, 경로 고정)
 };
 

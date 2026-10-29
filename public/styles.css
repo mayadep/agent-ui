@@ -66,7 +66,7 @@ body {
 .box { --role-color: var(--c-worker); min-width: 200px; max-width: 320px; background: var(--panel); border: 1px solid var(--role-color); border-radius: 6px; padding: 8px 10px; }
 .box.main { --role-color: var(--c-main); min-width: 280px; }
 .box.worker { --role-color: var(--c-worker); }
-.box.judge { --role-color: var(--c-judge); min-width: 280px; }
+.box.judge { --role-color: var(--c-judge); }
 .box.usage { --role-color: var(--line); min-width: 320px; }
 .box.empty, .box.dim { border-style: dashed; opacity: 0.45; color: var(--dim); text-align: center; }
 .box.st-running { box-shadow: 0 0 12px var(--role-color); }
