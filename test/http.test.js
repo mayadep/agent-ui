@@ -116,6 +116,10 @@ test("GET /api/agents lists registered agents", async () => {
   assert.equal(r.body.agents[0].role, "judge");
 });
 
+test("/api/agents 하위 경로는 404", async () => {
+  assert.equal((await getJson("/api/agents/x")).status, 404);
+});
+
 test("static serving and traversal", async () => {
   assert.equal(await rawGet("/static/../src/config.js"), 404);
   assert.equal(await rawGet("/static/..%2Fsrc%2Fconfig.js"), 404);

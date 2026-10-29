@@ -10,14 +10,27 @@ export function defaultAgentsDir() {
   return path.join(os.homedir(), ".claude", "agents");
 }
 
-// 프런트매터의 `key: value` 한 줄 값만 읽는다(등록 목록 표시에는 name/description/model 이면 충분).
+function unquote(v) {
+  const m = v.match(/^(["'])(.*)\1$/);
+  return m ? m[2] : v;
+}
+
+// 프런트매터의 `key: value` 값을 읽는다. 양끝 따옴표 한 쌍은 벗기고, `|`/`>` 블록 값은 들여쓴 다음 줄들을 공백으로 이어 붙인다.
 export function parseFrontmatter(text) {
   const m = String(text).match(/^---\r?\n([\s\S]*?)\r?\n---/);
   const out = {};
   if (!m) return out;
-  for (const line of m[1].split(/\r?\n/)) {
-    const kv = line.match(/^([A-Za-z_-]+):\s*(.*)$/);
-    if (kv) out[kv[1]] = kv[2].trim();
+  const lines = m[1].split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const kv = lines[i].match(/^([A-Za-z_-]+):\s*(.*)$/);
+    if (!kv) continue;
+    let value = kv[2].trim();
+    if (/^[|>][+-]?$/.test(value)) {
+      const parts = [];
+      while (i + 1 < lines.length && /^\s+\S/.test(lines[i + 1])) parts.push(lines[++i].trim());
+      value = parts.join(" ");
+    }
+    out[kv[1]] = unquote(value);
   }
   return out;
 }

@@ -1,6 +1,6 @@
 # agent-ui: Claude Code 에이전트 실행 뷰어 설계
 
-> 상태: 확정 (2026-10-29, 사용자가 "알아서 결정하고 확정 후 구현" 지시. 8장 질문은 모두 설계안대로 채택. 같은 날 리뷰 반영 보강도 사용자 승인 하에 진행, 상태 유지. R14(메인 깨움 규칙)도 사용자가 승인한 규칙으로 보강, 상태 유지. R15(사용 한도 표시)는 사용자 요청 기능이며 settings.json `statusLine` 추가를 사용자가 명시적으로 승인함, 상태 유지)
+> 상태: 확정 (2026-10-29, 사용자가 "알아서 결정하고 확정 후 구현" 지시. 8장 질문은 모두 설계안대로 채택. 같은 날 리뷰 반영 보강도 사용자 승인 하에 진행, 상태 유지. R14(메인 깨움 규칙)도 사용자가 승인한 규칙으로 보강, 상태 유지. R15(사용 한도 표시)는 사용자 요청 기능이며 settings.json `statusLine` 추가를 사용자가 명시적으로 승인함, 상태 유지. R16(judge 실행별 카드)·R17(등록 에이전트 목록)은 사용자 요청으로 이미 구현된 코드를 문서에 반영한 사후 보강이며 열린 질문이 없어 상태 유지)
 > 작성: architect 에이전트 · 날짜: 2026-10-29
 > 이 문서가 구현의 유일한 근거다. 여기 없는 내용은 구현자가 판단으로 채우지 않는다.
 
@@ -25,6 +25,14 @@
 | R13 | 7장에 10단계(보강 구현)와 11단계(누락 테스트 목록) 추가 | 7 | 테스트 추가 |
 | R14 | **메인 깨움 규칙**: 메인 소스의 비-`<synthetic>`·비-sidechain assistant 레코드, 또는 알려진 서브에이전트의 task-notification `user` 레코드도 main.status 를 `running` 으로 바꾸고 `turnEnded` 를 해제한다(기존에는 사람 프롬프트만). 그 턴의 `turn_duration`/`stop_hook_summary` 가 다시 `turn_end` 1회를 내고 idle 로 돌린다. 7장 12단계로 구현 | 1.2, 2, 3.5, 4.1, 5, 6, 7, 8 | 있음(12) |
 | R15 | **사용 한도(5시간/주간) 표시**: statusLine 명령 스크립트(`scripts/statusline.mjs`)가 stdin JSON 의 `rate_limits` 만 파싱해 `~/.claude/agent-ui/rate-limits.json` 에 원자적으로 병합 저장하고 터미널 상태 줄에 잔여 % 한 줄을 출력. 서버는 그 파일을 읽기 전용으로 `GET /api/limits` 로 제공(Run/SSE 스키마 불변), 클라이언트가 5초 폴링 후 THE GOAL 패널 tokens 아래에 잔여 %·막대·리셋까지 시간 표시. `~/.claude/settings.json` 의 `statusLine` 키 추가는 사용자 승인 하에 **메인 에이전트**가 수행(구현자 범위 밖, 5장 규칙). 7장 13단계 | 1, 1.3, 2.1, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 4, 4.1, 4.2, 5, 6, 7, 8 | 있음(13) |
+| R16 | **judge 실행별 카드**: judge 도 워커 행에서 실행마다 카드 1개(역할 색 파란 테두리)로 그린다. 하단 단일 judge 박스, `pickJudge`, `previous: N`, `after turn N` 표시, 워커→judge 연결선, `test/flow.test.js` 제거. 연결선은 usage → 각 카드이고, 줄바꿈으로 내려간 카드는 바로 위 줄의 가장 가까운 카드에서 잇는다. 기본 `judgeAgentTypes` 에 `tester` 추가. 7장 14단계 | 1, 2, 2.2, 3.10, 3.11, 4.1, 5, 6, 7, 7.1, 8 | 있음(14, 이미 구현·커밋 `051bfc3`) |
+| R17 | **등록 에이전트 목록**: 신규 `src/core/agents.js`(`~/.claude/agents/*.md` 프런트매터 읽기), 공개 API `GET /api/agents`, 설정 키 `agentsDir`, THE GOAL 패널 맨 아래 `REGISTERED AGENTS` 접기/펴기 목록. 기본 `judgeAgentTypes` 에 `security-reviewer` 추가(최종 기본값 `judge, reviewer, verifier, tester, security-reviewer`). 7장 15단계 | 1, 2.2, 3.9, 3.10, 3.11, 3.15, 3.16, 4.1, 4.4, 5, 6, 7, 7.4 | 있음(15, 이미 구현·커밋 `ca9ecc8` + 프런트매터 따옴표·블록 값 보강) |
+
+### R16·R17 보강 배경 (2026-10-29, 사후 문서화)
+- 두 기능 모두 사용자 요청으로 먼저 구현됐고(R16 커밋 `051bfc3`, R17 커밋 `ca9ecc8` 와 그 뒤 프런트매터 파서 보강), 이 절은 실제 코드(`src/core/agents.js`, `src/server/http.js`, `src/config.js`, `public/js/panels.js`, `public/js/app.js`, `public/js/flow.js`, 테스트)를 읽고 문서를 사실에 맞춘 것이다. 이 보강으로 생기는 코드 변경은 없다.
+- R16 이 기존 설계와 충돌하는 부분(4.1 "최종 judge 박스", 연결선 "각 워커→judge", 3.11 `pickJudge`, 7.1 `test/flow.test.js`, 8장 "흐린 `judge: n/a` 박스")은 해당 절에서 정정했다. `Run.verdict`(3.1, 3.5 의 최신 judge 선택 규칙)는 그대로이며 THE GOAL 패널의 verdict/judge 줄이 계속 쓴다.
+- 기존 설계의 기본 `judgeAgentTypes` 값 `["judge","reviewer","verifier"]` 는 코드와 달라 정정했다(3.10, 6).
+- 문서 정리: 빠져 있던 `## 4. 데이터 흐름` 제목을 복구했다(내용 변경 없음, 3.16 다음).
 
 ### R14 보강 배경 (2026-10-29)
 - 증상(실제 세션 화면에서 확인): 백그라운드 서브에이전트 완료 알림으로 메인이 깨어나 assistant 레코드를 계속 써도 메인 박스가 idle(글로우 없음)로 남고, 그 턴 끝의 `turn_duration`/`stop_hook_summary` 가 `turn_end` 이벤트를 만들지 않는다.
@@ -43,7 +51,8 @@
 - 포함:
   - 로컬 트랜스크립트(`~/.claude/projects/<projectKey>/<sessionId>.jsonl` + `<sessionId>/subagents/agent-<id>.jsonl` + `.meta.json`) 파싱
   - 파일 증분 읽기(폴링) → SSE 로 브라우저 푸시
-  - 화면: 상단 타이틀/범례, 좌측 THE GOAL 패널, 중앙 플로우(메인 → 중간 레이어 → 워커 행 → judge), 하단 session log
+  - 화면: 상단 타이틀/범례, 좌측 THE GOAL 패널, 중앙 플로우(메인 → 중간 레이어 → 서브에이전트 카드 행. R16 이후 judge 도 이 행에서 실행마다 카드 1개), 하단 session log
+  - (R17) 사용자가 등록한 에이전트 목록(`~/.claude/agents/*.md`): `GET /api/agents` 와 THE GOAL 패널 맨 아래 `REGISTERED AGENTS` 접기/펴기 목록
   - 모든 노드에 모델 짧은 표시명(예: `opus 5.5`, `haiku 5.5`) 표시
   - 세션 선택(목록 API + 화면 상단 선택 박스)
   - (R15) 사용 한도 표시: 5시간·주간 한도의 잔여 %, 막대, 리셋까지 남은 시간(THE GOAL 패널). 데이터는 statusLine 스크립트가 기록한 `~/.claude/agent-ui/rate-limits.json`
@@ -55,6 +64,7 @@
   - 과거 세션 통계/검색, 영구 저장소(DB)
   - 비용(USD) 표시 (`cost-state` 레코드는 세션 종료 시점에만 기록되어 실시간성이 없음)
   - 워커 진행률 % (로그에 근거 데이터가 없음, 6장 참조)
+  - (R17) 프로젝트별 에이전트(`<project>/.claude/agents/`)와 플러그인 제공 에이전트는 등록 목록에 표시하지 않는다(사용자 전역 `~/.claude/agents/` 만). 등록 목록 폴링·변경 감지는 하지 않는다(페이지 로드 시 1회). 필요해지면 `src/core/limits.js` 의 `LimitsReader` 처럼 mtime 캐시를 둔다
 
 ### 1.1 현재 상태 요약
 - 최초 설계 시점(2026-10-29) `D:\mayadep\agent-ui` 는 빈 프로젝트였다(git 저장소 아님, CLAUDE.md 없음). 현재 1~9단계 구현 완료, 테스트 6파일(`test/*.test.js`).
@@ -124,7 +134,7 @@
 | `public/js/dom.js` | 신규(문서 누락 반영) | DOM 생성 헬퍼 `h(tag, cls, text)`. 텍스트는 `textContent` 로만 | - | 없음 |
 | `public/js/format.js` | 신규 | 시각(HH:MM:SS), 경과시간(`1m 05s`), 토큰(`12.3k`) 포맷(순수) | - | 있음(10g) |
 | `public/js/panels.js` | 신규 | 헤더/범례, THE GOAL 패널 렌더 | dom, format | 없음 |
-| `public/js/flow.js` | 신규 | 플로우 다이어그램(노드 박스, SVG 연결선, 애니메이션 상태) 렌더, `pickJudge`(순수) | dom, format | 있음(10g) |
+| `public/js/flow.js` | 신규 | 플로우 다이어그램(노드 박스, SVG 연결선, 애니메이션 상태) 렌더. (R16) `pickJudge` 제거, judge 도 카드로 | dom, format | 있음(10g, R16 14단계) |
 | `public/js/log.js` | 신규 | session log: `LogIndex`(순수, 정렬 위치 계산) + DOM 반영(`resetLog`/`appendLog`), 자동 스크롤 | dom, format | 있음(10a) |
 | `test/models.test.js` | 신규 | 모델 매핑, `loadConfig` 기본 케이스 | - | 없음 |
 | `test/summarize.test.js` | 신규 | 요약/알림 파싱/역할 분류 테스트 | - | 있음(11: promptText) |
@@ -134,7 +144,7 @@
 | `test/format.test.js` | 신규 | `format.js` 단위 테스트, `sortEvents` | - | 있음(11) |
 | `test/config.test.js` | 신규(11) | `loadConfig` 검증 규칙 | - | 신규 |
 | `test/log.test.js` | 신규(11) | `LogIndex`, `sortEvents`, `eventTimeMs` | - | 신규 |
-| `test/flow.test.js` | 신규(11) | `pickJudge` | - | 신규 |
+| `test/flow.test.js` | 신규(11) → **삭제(R16)** | `pickJudge` 테스트였으나 R16 에서 함수와 함께 삭제 | - | 삭제 |
 | `test/watcher.test.js` | 신규(11) | `SessionWatcher` reset 경로, throttle 묶기, poll 예외, `getWatcher` idle 폐기 | fixtures | 신규 |
 | `test/paths.test.js` | 신규(11) | `listSessions` 64 KiB head/tail | - | 신규 |
 | `test/fixtures/projects/D--demo/11111111-1111-4111-8111-111111111111.jsonl` 외 `subagents/*` | 신규 | **손으로 작성한** 익명 픽스처(메인 1 + 워커 3 + reviewer 1, 모델 opus/sonnet/haiku 혼합, 실패 1건, `<synthetic>` 1건, 같은 message.id 다중 줄 포함) | - | 없음 |
@@ -163,6 +173,25 @@
 | `test/fixtures/statusline/input-docs.json` | 신규 | 공식 문서 예시 구조를 옮긴 **손으로 쓴** stdin(값: five_hour 23.5 / 1738425600, seven_day 41.2 / 1738857600, `session_id: "test-session-abc"`, 그 밖에 `model`, `workspace`, `context_window` 일부). 실계정 stdin 복사 금지 | - | 13b |
 | `test/fixtures/statusline/input-five-hour-only.json` | 신규 | `rate_limits` 에 `five_hour` 만(30, 1738425600) | - | 13b |
 | `test/fixtures/statusline/input-no-rate-limits.json` | 신규 | `rate_limits` 키 없음(API 키 사용자·첫 응답 전) | - | 13b |
+
+### 2.2 R16(14단계)·R17(15단계) 신규·변경 파일
+
+외부 의존성 0개 원칙 유지. 아래 표에 없는 파일은 14·15단계에서 바뀌지 않았다(특히 `src/core/reducer.js`, `src/core/roles.js`, `src/core/session-watcher.js`, Run/Event/AgentNode 스키마, SSE 페이로드).
+
+| 모듈/파일 | 신규·변경 | 책임 | 의존 | 단계 |
+|---|---|---|---|---|
+| `public/js/flow.js` | 변경 | judge 노드를 워커 행에 실행마다 카드로 렌더(`box ${node.role}` 클래스), 단일 judge 박스·`pickJudge` 삭제, 구조 서명에서 judgeId 제거, 연결선 규칙 변경(3.11, 4.1) | dom, format | 14 |
+| `public/styles.css` | 변경 | (14) `.box.judge { --role-color: var(--c-judge); }`. (15) `.g-agents`, `.g-agents-head`, `.g-toggle`, `.ag-list[hidden]`, `.ag-row`, `.ag-name.ag-judge`, `.ag-name.ag-worker`, `.ag-model`. 새 색 변수 없음 | - | 14, 15 |
+| `test/flow.test.js` | 삭제 | `pickJudge` 가 없어져 삭제 | - | 14 |
+| `src/core/agents.js` | 신규 | `defaultAgentsDir`, `parseFrontmatter`, `listAgents`(3.15). 읽기 전용 | `node:fs`, `node:os`, `node:path`, `./models.js`(`parseModel`), `./roles.js`(`classifyRole`) | 15 |
+| `src/config.js` | 변경 | `DEFAULTS.judgeAgentTypes` 를 `["judge","reviewer","verifier","tester","security-reviewer"]` 로(14 에서 `tester`, 15 에서 `security-reviewer`), `DEFAULTS.agentsDir: null` 추가, `loadConfig` 가 null 이면 `defaultAgentsDir()` 로 채움. CLI 옵션 없음(3.10) | `src/core/agents.js` | 14, 15 |
+| `src/server/http.js` | 변경 | `GET /api/agents` 라우트(3.9) | `src/core/agents.js` | 15 |
+| `public/js/panels.js` | 변경 | `renderGoal` 5번째 인자 `agents`, 비공개 `buildAgents`, 접힘 상태 모듈 변수 + localStorage(3.16) | dom | 15 |
+| `public/js/app.js` | 변경 | 모듈 상태 `agents`, `loadAgents()` 페이지 로드 시 1회, `renderTick` 이 `renderGoal` 에 `agents` 전달(3.16) | - | 15 |
+| `test/agents.test.js` | 신규 | `parseFrontmatter`, `listAgents` 단위 테스트(7.4) | - | 15 |
+| `test/http.test.js` | 변경 | `cfg.agentsDir` 를 임시 폴더로 지정, `/api/agents` 응답·하위 경로 404(7.4) | - | 15 |
+| `test/config.test.js` | 변경 | `DEFAULTS.judgeAgentTypes` 기본값 단언을 새 목록으로 | - | 14, 15 |
+| `README.md` | 변경 | `--judge-types` 기본값, 플로우 설명, 등록 에이전트 패널 설명 | - | 14, 15 |
 
 ## 3. 인터페이스
 
@@ -416,6 +445,7 @@ export function isAllowedHost(hostHeader /* string|undefined */, port /* number 
 | `GET /api/run/:projectKey/:sessionId` | `200 { run: Run, events: Event[] }`. 검증 실패 `400 { error: "invalid session" }`, 메인 파일 없음 `404 { error: "not found" }` |
 | `GET /api/run/:projectKey/:sessionId/stream` | SSE. 아래 참조. 검증/존재 실패는 위와 같은 JSON 에러 |
 | `GET /api/limits` (R15) | `200 { status: "ok"\|"missing"\|"invalid", limits: Limits\|null }` = `limitsReader.read()` 결과 그대로(3.13). 쿼리 문자열은 무시. 경로는 정확히 `seg.length === 2 && seg[1] === "limits"` 일 때만. 파일이 없거나 깨져도 200(상태는 `status` 로 구분). `/api/limits/<무엇이든>` 은 404 |
+| `GET /api/agents` (R17) | `200 { agents: RegisteredAgent[] }` = `listAgents(cfg.agentsDir ?? defaultAgentsDir(), cfg.judgeAgentTypes)`(3.15). 요청마다 폴더를 다시 읽는다(캐시 없음). 쿼리 문자열은 무시. 경로는 정확히 `seg.length === 2 && seg[1] === "agents"` 일 때만. 폴더가 없거나 읽을 수 없어도 `200 { agents: [] }`. `/api/agents/<무엇이든>` 은 404 |
 | 그 외 | `404 { error: "not found" }` |
 | 처리 중 예외 | 헤더 전이면 `500 { error: "internal error" }`, 이미 보냈으면 연결 종료. `console.error("agent-ui: request failed:", message)` |
 
@@ -427,11 +457,14 @@ export function isAllowedHost(hostHeader /* string|undefined */, port /* number 
   - 연결 종료 시 unsubscribe.
 - 클라이언트 재연결: `EventSource` 기본 재연결에 맡기고, 재연결 시 받은 snapshot 으로 상태를 통째로 교체한다.
 - (R15) `createServer(cfg)` 는 함수 시작부에서 `const limitsReader = new LimitsReader(cfg.limitsFile ?? defaultLimitsFile())` 를 **1개** 만든다(요청마다 만들지 않음). 한도 경로는 이 값 하나뿐이고 요청 URL·쿼리·헤더로 경로를 만들지 않는다. SSE snapshot/update 페이로드와 `Run` 에는 한도를 넣지 않는다. Host 검증(R3)은 이 라우트에도 그대로 먼저 적용된다(라우트를 `route()` 안에 둔다).
+- (R17) `/api/agents` 도 `route()` 안에 있어 Host 검증·405 규칙이 먼저 적용된다. 폴더 경로는 `cfg.agentsDir`(null 이면 `defaultAgentsDir()`) 하나뿐이고 요청 URL·쿼리·헤더로 경로를 만들지 않는다. 등록 목록은 SSE snapshot/update 와 `Run` 에 넣지 않는다.
 
 ### 3.10 설정 (`src/config.js`)
 
 ```js
 import { defaultProjectsRoot } from "./core/paths.js";
+import { defaultLimitsFile } from "./core/limits.js";   // (R15)
+import { defaultAgentsDir } from "./core/agents.js";    // (R17)
 export const DEFAULTS = {
   host: "127.0.0.1",
   port: 8770,
@@ -442,11 +475,14 @@ export const DEFAULTS = {
   idleWatcherMs: 60 * 1000,
   maxEvents: 2000,               // RunState 보관 상한
   snapshotEvents: 300,           // snapshot 에 담는 최근 이벤트 수
-  judgeAgentTypes: ["judge", "reviewer", "verifier"],
+  judgeAgentTypes: ["judge", "reviewer", "verifier", "tester", "security-reviewer"], // (R16/R17 정정) 기존 문서의 3개 목록은 코드와 다름
   limitsFile: null,              // (R15) null → defaultLimitsFile() (src/core/limits.js)
+  agentsDir: null,               // (R17) null → defaultAgentsDir() (src/core/agents.js)
 };
-export function loadConfig(argv /* string[] */) /* : Config */   // Config = typeof DEFAULTS 와 같은 모양, projectsRoot·limitsFile 은 string 으로 채워짐
+export function loadConfig(argv /* string[] */) /* : Config */   // Config = typeof DEFAULTS 와 같은 모양, projectsRoot·limitsFile·agentsDir 은 string 으로 채워짐
 ```
+- (R16/R17) `judgeAgentTypes` 기본값은 `judge`, `reviewer`, `verifier`, `tester`, `security-reviewer` 5개다. 서브에이전트 노드 역할(3.3)과 등록 에이전트 목록의 역할(3.15)이 같은 값을 쓴다. `--judge-types` 로 바꾸면 둘 다 바뀐다.
+- (R17) `agentsDir`: `loadConfig` 끝에서 `if (cfg.agentsDir === null) cfg.agentsDir = defaultAgentsDir()`. **CLI 옵션은 만들지 않는다**(경로 고정). 테스트는 `createServer({ ...DEFAULTS, agentsDir: <임시 폴더> })` 로 지정한다. `createServer` 는 `cfg.agentsDir` 가 null 이면 `defaultAgentsDir()` 을 쓴다.
 - (R15) `limitsFile`: `loadConfig` 끝에서 `if (cfg.limitsFile === null) cfg.limitsFile = defaultLimitsFile()`. **CLI 옵션은 만들지 않는다**(경로 고정). 테스트는 `createServer({ ...DEFAULTS, limitsFile: <임시 경로> })` 로 지정한다. `createServer` 는 `cfg.limitsFile` 이 null 이면 `defaultLimitsFile()` 을 쓴다(기존 http 테스트처럼 `loadConfig` 없이 `DEFAULTS` 를 펼쳐 넘기는 경우 대비).
 - CLI: `--port <n>`, `--host <h>`, `--projects-root <dir>`, `--judge-types a,b,c`, `--poll-ms <n>`. 값이 없는 옵션은 `Error("missing value for <opt>")`. 알 수 없는 인자는 `Error("unknown option: …")`.
 - **검증 규칙(R4)** — 위반 시 `loadConfig` 가 `Error` 를 던지고 `main.js` 가 `agent-ui: <message>` 를 stderr 에 출력 후 `process.exit(1)`:
@@ -469,11 +505,11 @@ export function fmtTokens(n /* number */) /* : string */            // 아래 �
 export function fmtCountdown(ms /* number */) /* : string */        // (R15) 아래 규칙
 // public/js/panels.js
 export function renderHeader(el /* HTMLElement */, run /* Run */) /* : void */
-export function renderGoal(el /* HTMLElement */, run /* Run */, nowMs /* number */, limitsResp /* LimitsResp|undefined, R15 3.14 */) /* : void */
+export function renderGoal(el /* HTMLElement */, run /* Run */, nowMs /* number */, limitsResp /* LimitsResp|undefined, R15 3.14 */, agents /* RegisteredAgent[]|null|undefined, R17 3.16 */) /* : void */
 // public/js/limits.js → 3.14
 // public/js/flow.js
 export function renderFlow(el /* HTMLElement */, run /* Run */, nowMs /* number */) /* : void */
-export function pickJudge(run /* Run */) /* : { latest: AgentNode|null, previous: number } */
+// (R16) pickJudge 는 삭제됐다. flow.js 의 공개 export 는 renderFlow 하나뿐
 // public/js/log.js  → 3.11.1
 ```
 - 모든 텍스트는 `textContent` 로만 넣는다(`innerHTML` 에 데이터 삽입 금지). DOM 생성은 `dom.js` 의 `h` 를 쓴다.
@@ -493,8 +529,13 @@ export function pickJudge(run /* Run */) /* : { latest: AgentNode|null, previous
   - 모듈 상태 `let limitsResp = { status: "loading", limits: null };`
   - `async function pollLimits()`: `fetch("/api/limits")`. `r.ok` 이고 본문의 `status` 가 `"ok"`/`"missing"`/`"invalid"` 중 하나면 `limitsResp = { status: body.status, limits: body.limits ?? null }`. 그 외(네트워크 예외, 비 2xx, 형식 불일치)는 `limitsResp.status === "ok"` 이면 **그대로 유지**(마지막 값 + 3.14 신선도 표시로 처리), 아니면 `limitsResp = { status: "error", limits: null }`. 끝에 `renderTick()`. 예외를 밖으로 던지지 않는다.
   - `main()` 에서 `connect(p, s)` 다음에 `pollLimits()` 1회, `setInterval(pollLimits, LIMITS_POLL_MS)`. "no sessions" 로 조기 반환하는 경로에서는 호출하지 않는다(goal 패널이 없음).
-  - `renderTick()` 은 `renderGoal(els.goal, state.run, Date.now(), limitsResp)` 로 호출. 리셋까지 남은 시간은 기존 1초 타이머의 `renderTick` 으로 갱신된다(서버 요청 없음).
-- **`pickJudge(run)`** (순수, DOM 불필요): `latest` = `run.verdict.judgeId` 가 있으면 그 id 의 노드, 없으면 null. `previous` = role `judge` 인 노드 수 − (latest 가 있으면 1, 없으면 0). `renderFlow` 는 judge 박스에 이 값을 쓰고, `previous > 0` 이면 `previous: N` 을 표시한다. judge 노드는 워커 행에 그리지 않는다.
+  - `renderTick()` 은 `renderGoal(els.goal, state.run, Date.now(), limitsResp, agents)` 로 호출(R17 에서 5번째 인자 추가, 3.16). 리셋까지 남은 시간은 기존 1초 타이머의 `renderTick` 으로 갱신된다(서버 요청 없음).
+- ~~`pickJudge(run)`~~ (R16 에서 삭제): 기존 "judge 박스에 최신 judge 1개 + `previous: N`, judge 노드는 워커 행에 그리지 않음" 규칙은 폐기됐다. 현재 규칙은 아래 `renderFlow`.
+- **`renderFlow(el, run, nowMs)` (R16)**:
+  - 카드 대상 = `run.nodes.filter(n => n.role !== "main")`(worker 와 judge 모두), `run.nodes` 순서(startedAt 오름차순) 그대로. 카드는 같은 빌더(`buildWorker`)로 만들고 `box.className = \`box ${node.role} ${statusClass(node.status)}\``. judge 카드는 CSS `.box.judge { --role-color: var(--c-judge) }` 로 파란 테두리, 그 외 내용(제목·배지·설명·meta·activity·진행 막대)은 워커와 같다. 서브에이전트 0개면 점선 빈 박스 `no subagents`.
+  - 구조 서명(`signature`) = 노드 `id:role` 목록 + `modelUsage` label 목록. judgeId 는 포함하지 않는다. 서명이 같으면 제자리 갱신.
+  - 연결선 = 메인 → usage 1개 + usage → 각 카드 1개씩. 선의 running 애니메이션은 도착 노드 status 가 `running` 일 때.
+  - 연결선 배치(`layoutLinks`, 비공개): usage 에서 출발하는 선의 도착 카드 `b` 에 대해, 다른 usage 출발 선의 도착 카드들 중 `r.bottom <= b.top + 1 && r.top < b.top - 1`(= `b` 보다 위 줄)인 카드를 후보로 삼고, 후보가 있으면 가로 중심이 `b` 의 가로 중심과 가장 가까운 카드의 아래 중앙에서 선을 시작한다(flex-wrap 으로 내려간 카드의 선이 윗줄 카드를 가로지르지 않게). 후보가 없으면(첫 줄) usage 박스 아래 중앙에서 시작. 후보는 "바로 위 줄"(위쪽 카드 중 `bottom` 이 가장 큰 줄)의 카드로 한정하며, 그 줄에서 가로 중심이 가장 가까운 카드를 고른다(줄이 3개 이상이어도 동일).
 - `app.js`: URL `?p=<projectKey>&s=<sessionId>` 가 없으면 `/api/sessions/latest` 로 받아 `history.replaceState` 로 URL 을 채운다(404 면 "no sessions" 표시 후 종료). 상단 선택 박스는 `/api/sessions` 목록(`title ?? sessionId 앞 8자` + `[projectKey]`)으로 채우고 변경 시 `location.search` 를 바꿔 다시 로드. 경과시간 표시는 1초 타이머로 `renderGoal`/`renderFlow` 를 다시 호출(서버 요청 없음, 로그는 다시 그리지 않음).
   - snapshot 수신: `state = { run, events: events.slice(-1000) }`, `renderHeader`/`renderGoal`/`renderFlow`, `resetLog(els.log, state.events, state.run)`.
   - update 수신: `lastSeq = state.events.at(-1)?.seq ?? -1`, `fresh = newEvents.filter(e => e.seq > lastSeq)`(snapshot 과 첫 update 의 겹침 제거), `state.events = state.events.concat(fresh).slice(-1000)`, `state.run = run`, 렌더 3종, **`appendLog(els.log, fresh, state.run)`**. update 에서 `resetLog` 를 호출하지 않는다.
@@ -685,6 +726,57 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
   ```
   `style.width` 외에 인라인 스타일을 쓰지 않는다. `fillPct` 는 `limitView` 가 0~100 으로 보장한다.
 
+### 3.15 등록 에이전트 읽기 (`src/core/agents.js`, R17)
+
+```js
+/** @typedef {{
+ *   name: string,                                    // 프런트매터 name, 없거나 빈 문자열이면 파일명에서 ".md" 를 뗀 값
+ *   role: 'worker'|'judge',                          // classifyRole(name, judgeAgentTypes)
+ *   description: string,                             // 프런트매터 description 앞 200자(String.prototype.slice, UTF-16 단위), 없으면 ""
+ *   model: { family: ModelFamily, label: string } | null  // parseModel(프런트매터 model) 의 family/label, null 이면 null
+ * }} RegisteredAgent */
+
+export function defaultAgentsDir() /* : string */                 // path.join(os.homedir(), ".claude", "agents")
+export function parseFrontmatter(text /* string */) /* : Record<string, string> */
+export function listAgents(dir /* string */, judgeAgentTypes /* string[] */) /* : RegisteredAgent[] */
+```
+- **`parseFrontmatter(text)`**: 던지지 않는다.
+  - `String(text)` 가 `/^---\r?\n([\s\S]*?)\r?\n---/` 와 맞지 않으면(파일 맨 앞이 `---` 줄이 아니면) `{}`.
+  - 블록 안을 `\r?\n` 으로 나눠 줄마다 `/^([A-Za-z_-]+):\s*(.*)$/` 로 `key: value` 를 찾는다. 들여쓴 줄, 주석, 목록 항목 등 맞지 않는 줄은 건너뛴다. 값은 trim.
+  - 값이 `/^[|>][+-]?$/`(`|`, `>`, `|-`, `>+` 등 블록 지시자)이면 바로 다음 줄부터 `/^\s+\S/`(들여쓰고 공백만이 아닌 줄)에 맞는 줄을 차례로 소비해 각 줄을 trim 한 뒤 공백 1개로 이어 붙인 것을 값으로 한다. 빈 줄이나 들여쓰지 않은 줄에서 멈춘다. `|` 와 `>` 를 구분하지 않는다(둘 다 한 줄로 접음).
+  - 마지막으로 값 양끝이 같은 종류의 따옴표 한 쌍(`"…"` 또는 `'…'`)이면 그 한 쌍만 벗긴다(`/^(["'])(.*)\1$/`). 이스케이프 해석은 하지 않는다.
+  - 같은 키가 여러 번 나오면 마지막 값. 값은 모두 문자열(YAML 타입 변환 없음).
+- **`listAgents(dir, judgeAgentTypes)`**: 던지지 않는다.
+  - `fs.readdirSync(dir)` 실패(폴더 없음 등)면 `[]`.
+  - 이름을 `Array.prototype.sort()` 기본 정렬(코드 유닛 사전순)로 정렬한 뒤 `.md` 로 끝나는 항목만 처리. 하위 폴더는 내려가지 않는다.
+  - 각 파일을 `fs.readFileSync(…, "utf8")` 로 읽어 `parseFrontmatter`. 읽기 실패(디렉터리, 권한 등)면 그 항목만 건너뛴다.
+  - 결과 순서는 파일명 순서다(name 순이 아님).
+  - `role` 은 `name` 으로 분류한다(Claude Code 의 `subagent_type` 이 에이전트 name 이므로 서브에이전트 노드 분류와 같은 기준).
+
+### 3.16 등록 에이전트 패널 (`public/js/panels.js`, `public/js/app.js`, R17)
+
+- `renderGoal(el, run, nowMs, limitsResp, agents)`: `agents` 가 truthy(배열)이면 기존 마지막 요소(`g-judge` 줄) **다음**에 `buildAgents(agents)` 1개를 넣는다. `null`/`undefined` 면 패널을 만들지 않는다. 다른 행 순서는 바꾸지 않는다.
+- `buildAgents(agents)`(비공개) DOM:
+  ```
+  div.g-agents
+    div.g-agents-head
+      span                 ← `REGISTERED AGENTS (${agents.length})`
+      button.g-toggle      ← 접힘이면 "+", 펼침이면 "−"(U+2212). type="button", title 접힘 "펼치기"/펼침 "접기", aria-expanded = String(!collapsed)
+    div.ag-list            (hidden = collapsed)
+      div.g-sub "none"     (agents 가 빈 배열일 때만)
+      div.ag-row           (title = description → 마우스오버 툴팁)  ← 에이전트마다, 서버 순서 그대로
+        span.ag-name.ag-{role}             ← name (역할 색: judge 파랑, worker 초록)
+        span.ag-model.m-{family|unknown}   ← model.label, model 이 null 이면 "inherit"
+  ```
+  텍스트는 모두 `h()`/`textContent`, `innerHTML` 금지.
+- 접힘 상태: `panels.js` 모듈 변수 `agentsCollapsed`(기본 false). 모듈 로드 시 `try { agentsCollapsed = localStorage.getItem("agent-ui.agentsCollapsed") === "1" } catch {}`. 버튼 클릭 시 값을 뒤집고 `try { localStorage.setItem(KEY, collapsed ? "1" : "0") } catch {}`, 그 자리에서 `.ag-list` 의 `hidden`, 버튼 글자·title·aria-expanded 를 바꾼다(전체 재렌더 없음). 1초 `renderTick` 이 패널을 다시 만들어도 모듈 변수에서 상태를 읽으므로 유지된다. 키 이름 상수 `COLLAPSE_KEY = "agent-ui.agentsCollapsed"`.
+- `app.js`:
+  - 모듈 상태 `let agents = null;`(null = 아직 못 받음 → 패널 생략).
+  - `async function loadAgents()`: `fetch("/api/agents")`, `r.ok` 이면 `agents = (await r.json()).agents`. 네트워크 예외·비 2xx 는 삼키고 `agents` 는 null 유지(패널 생략). 끝에 `renderTick()`. 예외를 밖으로 던지지 않는다.
+  - `main()` 에서 `connect(p, s)` 다음, `pollLimits()` 앞에서 **1회만** 호출. 주기 호출 없음. "no sessions" 조기 반환 경로에서는 호출하지 않는다.
+
+## 4. 데이터 흐름
+
 1. 사용자가 `npm start` (또는 `node src/server/main.js --port 8770`) 실행 → `loadConfig`(검증 실패 시 exit 1) → `createServer` → 콘솔에 `agent-ui: http://127.0.0.1:8770` 과 projects root 출력.
 2. 브라우저가 `/` 로드(Host 검증 통과) → `app.js` 가 URL 의 세션 또는 `/api/sessions/latest` 로 대상 세션 결정.
 3. `app.js` 가 `EventSource('/api/run/<p>/<s>/stream')` 연결 → 서버가 `getWatcher` 로 세션 watcher 를 얻는다(없으면 생성 후 `start()`; 첫 poll 에서 메인/서브에이전트 파일 전체를 읽어 RunState 구축).
@@ -707,18 +799,19 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 | (R15) 사용 한도 블록 | tokens 행 바로 아래 `div.g-limits`(점선 위 경계). 행 2개(5h, 7d), 각 행 2줄: 1줄 = 라벨(`5h`/`7d`, 회색) · 가로 막대 · `76% left`(굵게, 수준 색). 2줄 = 왼쪽 `used 24%`(회색), 오른쪽 `resets in 2h 13m`(본문색 `--text`, 강조). 막대: 왼쪽부터 **사용한 부분**을 수준 색으로 채우고(`width = fillPct%`, fillPct = 사용량), 나머지 **남은 부분**은 줄무늬 트랙(`--line`/`--bg` 사선 반복)으로 구분. 수준 색: normal `--c-worker`(초록), warn(잔여 < 20) `--c-goal`(주황), danger(잔여 < 10) `--fail`(빨강). 블록 맨 아래 `lim-note` 1줄(사유/신선도) | 파일 없음: 두 행 `n/a`, 막대 점선 빈 트랙, 노트 `limits n/a · Pro/Max only, shown after first response`. 윈도우 하나만 없음: 그 행만 `n/a · no data`. 리셋 시각 경과: `reset` / `window reset` / `awaiting update`, 막대 점선 빈 트랙. 오래됨(15분 초과): 값 유지, 행 불투명도 0.6, 노트 `as of 25m 03s ago` |
 | verdict | `run.verdict.status` (+ `run.verdict.text` 1줄) | 판정 노드 없음 → `n/a` |
 | running 시간 | main.status 가 running 이면 `now - currentPrompt.ts`, idle 이면 `idle · last activity {fmtElapsed} ago`. R14 이후 알림으로 깬 턴도 running 이 되며, 이때도 기준은 마지막 사람 프롬프트 시각 그대로다(턴 시작 시각 필드는 이번에 추가하지 않음, 8장 참고) | `n/a` |
-| judge 모델 설명 | judge 노드의 `model.label` + `agentType` | `judge: n/a` |
+| judge 모델 설명 | `run.verdict.judgeId` 노드(3.5 최신 judge)의 `model.label` + `agentType` | `judge: n/a` |
+| (R17) 등록 에이전트 | THE GOAL 패널 맨 아래(judge 줄 다음) `REGISTERED AGENTS (N)` + `+`/`−` 버튼, 행마다 name(역할 색) · 모델 label(패밀리 색), 마우스오버 시 description(3.16) | 목록 0개 → `none`. `/api/agents` 실패 → 패널 자체 생략. 모델 없음 → `inherit` |
 | 메인 에이전트 박스 | 모델 label(보라 테두리), `activity`, `turn N`, 경과(`now - run.startedAt`), `permissionMode` | activity null → `—` |
 | 중간 레이어 박스(점수 막대) | "model usage": `run.modelUsage` 를 label 별 output 토큰 가로 막대(최댓값 대비 비율 %, 최댓값 0 이면 분모 1, 모델 패밀리 색). **값 텍스트는 `fmtTokens(outputTokens)`(R8)** | 서브에이전트 0개여도 표시(메인 모델 1줄) |
-| 병렬 워커 박스 | role `worker` 인 노드 전부, startedAt 순. 박스: `agentType ?? id 앞 7자`, `description`, 모델 label, `{status} · tools N · {경과}`, `activity` | 워커 0개 → 점선 빈 박스 1개 "no subagents" |
+| 병렬 워커 박스 | (R16) role 이 `main` 이 아닌 노드 전부(`worker` 와 `judge`), `run.nodes` 순서(startedAt 순). judge 는 테두리만 파랑(`.box.judge`), 내용은 워커와 동일. 박스: `agentType ?? id 앞 7자`, `description`, 모델 label, `{status} · tools N · {경과}`, `activity` | 워커 0개 → 점선 빈 박스 1개 "no subagents" |
 | 워커 경과 | `startedAt` 이 null 이면 `—`. 아니면 `fmtElapsed((endedAt ? Date.parse(endedAt) : now) - Date.parse(startedAt))`. endedAt 은 3.5 toRunView 보정값이므로 meta.finished 로만 완료된 노드도 마지막 활동 시각에서 멈춘다(R7) | - |
 | 진행률 % | 표시하지 않음. running 이면 무한 진행 막대(CSS 애니메이션), completed 면 꽉 찬 막대, failed 면 빨간 막대, pending/stale/idle 이면 빈 막대, pending 이면 `not started` | - |
-| 최종 judge 박스 | `pickJudge(run).latest` 노드: 제목 `agentType ?? "judge"`, 모델 label, `after turn {spawnedAtMainTurn ?? "n/a"}`, `run.verdict.text ? "{status}: {text}" : status`. `previous > 0` 이면 `previous: N`. 나머지 judge 는 워커 행에 표시하지 않음 | judge 없음 → 흐린 박스 `judge: n/a` |
+| ~~최종 judge 박스~~ | **(R16 폐기)** 하단 단일 judge 박스, `pickJudge`, `after turn N`, `previous: N`, 흐린 `judge: n/a` 박스는 그리지 않는다. judge 는 위 "병렬 워커 박스" 행에서 실행마다 카드 1개. 판정 문구는 THE GOAL 패널 verdict 행(`run.verdict`)에서만 보인다 | - |
 | session log | 3.11.1 | - |
 
-- "after turn N" = judge 노드의 `spawnedAtMainTurn`. reducer 는 메인의 `Agent`/`Task` tool_use 를 볼 때 `pendingSpawnTurn[toolUseId] = main.turns` 를 기록하고, 이후 `toolUseResult`(async 또는 동기)의 tool_use_id 나 `meta.toolUseId` 로 노드와 연결될 때 그 값을 노드에 복사한다. null 이면 `after turn n/a`.
+- (R16 이후 화면에 표시하지 않음, `AgentNode.spawnedAtMainTurn` 필드와 reducer 규칙은 유지) "after turn N" = judge 노드의 `spawnedAtMainTurn`. reducer 는 메인의 `Agent`/`Task` tool_use 를 볼 때 `pendingSpawnTurn[toolUseId] = main.turns` 를 기록하고, 이후 `toolUseResult`(async 또는 동기)의 tool_use_id 나 `meta.toolUseId` 로 노드와 연결될 때 그 값을 노드에 복사한다. null 이면 `after turn n/a`.
 - 상태별 시각 규칙: `running` → 테두리 글로우(`box-shadow: 0 0 12px var(--role-color)`) + 들어오는 연결선에 흐르는 점 애니메이션; `pending`/`idle`/`completed` → 글로우 없음, 연결선 정지 점선; `completed` 는 불투명도 0.75, `pending`/`stale`/데이터 없음 박스는 0.45; `failed` 는 테두리 `#ff5c5c`.
-- 연결선: SVG 오버레이 1장. 메인→중간, 중간→각 워커, 각 워커→judge(judge 없으면 생략). 경로는 박스 아래 중앙 → 위 중앙의 세로 3차 베지어. 흐르는 점 = `stroke-dasharray: 2 8` + `stroke-dashoffset` CSS 애니메이션(1s linear infinite). 창 크기 변경 시 `ResizeObserver` 로 다시 계산. 플로우 DOM 은 구조 서명(노드 id:role 목록, judgeId, 모델 label 목록)이 바뀔 때만 다시 만들고 나머지는 제자리 갱신.
+- 연결선 (R16 정정): SVG 오버레이 1장. 메인→중간(usage) 1개, 중간→각 카드(워커·judge) 1개씩. 워커→judge 선은 없다. flex-wrap 으로 아래 줄에 내려간 카드는 usage 대신 위 줄의 가로 중심이 가장 가까운 카드 아래 중앙에서 선을 시작한다(3.11 `renderFlow`). 경로는 출발 박스 아래 중앙 → 도착 박스 위 중앙의 세로 3차 베지어. 흐르는 점 = `stroke-dasharray: 2 8` + `stroke-dashoffset` CSS 애니메이션(1s linear infinite), 도착 노드가 running 일 때. 창 크기 변경 시 `ResizeObserver` 로 다시 계산(매 `renderFlow` 끝에도 다시 계산). 플로우 DOM 은 구조 서명(노드 id:role 목록, 모델 label 목록. judgeId 는 R16 에서 제외)이 바뀔 때만 다시 만들고 나머지는 제자리 갱신.
 - 모델 표시 색: 박스 테두리는 **역할 색**(범례), 박스 안 모델 배지 글자색은 **패밀리 색**(`--m-opus: #c9a2ff`, `--m-sonnet: #7fc8ff`, `--m-haiku: #7ee2a8`, `--m-unknown: #9a9a9a`). unknown 은 배지에 원본 label 그대로.
 - 레이아웃: 전체 다크 배경 `#0d0f12`, 모노스페이스 `ui-monospace, "Cascadia Mono", Consolas, monospace`, 터미널 창 상단 바에 신호등 점 3개(`#ff5f57`, `#febc2e`, `#28c840`). 그리드: 좌측 goal 패널 300px 고정 + 중앙 플로우 가변, 하단 log 높이 240px 스크롤. 워커 행은 `flex-wrap`, 박스 최소 폭 200px.
 - (R15) 사용 한도 블록 CSS(`public/styles.css` 끝에 추가, 새 CSS 변수 없음). 패널 내부 폭 272px(300 − 좌우 padding 14×2)에서 깨지지 않도록 고정 폭은 라벨 22px 뿐이고 막대는 `minmax(0, 1fr)` 로 줄어든다:
@@ -777,9 +870,17 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
   6. 롤백 방법: 백업 파일을 `~/.claude/settings.json` 으로 다시 복사(바이트 그대로). 기능만 끄고 싶을 때는 `statusLine` 키 하나만 삭제해도 된다. 한도 파일(`~/.claude/agent-ui/`)은 삭제해도 무방(다음 응답에서 다시 생김).
   7. 반영: 실행 중인 Claude Code 세션은 설정 변경을 다음 갱신 때 반영하거나 재시작이 필요할 수 있다. 사용자에게 "상태 줄 추가로 footer 키 힌트(`esc to interrupt` 등)가 숨겨진다" 는 점을 함께 알린다(1.3).
 
+### 4.4 등록 에이전트 흐름 (R17)
+
+1. 페이지 로드 시 `app.js` `main()` 이 `connect` 직후 `loadAgents()` 를 1회 호출 → `GET /api/agents`.
+2. 서버(`route()`, Host 검증 후)가 `listAgents(cfg.agentsDir, cfg.judgeAgentTypes)` 로 `~/.claude/agents/*.md` 를 그 자리에서 읽어 `{ agents }` 반환. 서버 메모리에 보관하지 않는다.
+3. 클라이언트가 모듈 변수 `agents` 에 저장하고 `renderTick()`. 이후 1초 타이머의 `renderTick` 이 매번 `renderGoal(…, agents)` 로 패널을 다시 만든다(접힘 상태는 `panels.js` 모듈 변수에서).
+4. 요청이 실패하면 `agents` 는 null 로 남고 패널은 그려지지 않는다. 재시도·폴링 없음. 에이전트를 새로 등록하면 사용자가 새로고침한다.
+5. 상태 저장 위치: 원본 = `~/.claude/agents/*.md`(읽기만), 서버 = 없음, 브라우저 = `agents`(app.js), `agentsCollapsed`(panels.js) + `localStorage["agent-ui.agentsCollapsed"]`(`"1"`/`"0"`). 세션 SSE·Run·watcher 와 독립.
+
 ## 5. 하지 말아야 할 것
 
-- npm 패키지(프레임워크, 번들러, 차트 라이브러리, chokidar, ws, jsdom 등)를 추가하지 않는다. `package.json` 에 `dependencies`/`devDependencies` 를 만들지 않는다. DOM 이 필요한 로직은 `LogIndex`/`pickJudge` 처럼 순수 함수로 분리해 테스트한다.
+- npm 패키지(프레임워크, 번들러, 차트 라이브러리, chokidar, ws, jsdom 등)를 추가하지 않는다. `package.json` 에 `dependencies`/`devDependencies` 를 만들지 않는다. DOM 이 필요한 로직은 `LogIndex`/`limitView` 처럼 순수 함수로 분리해 테스트한다.
 - `~/.claude` 아래 어떤 파일도 쓰거나 이동·삭제하지 않는다. `settings.json` 에 훅을 추가하지 않는다. 트랜스크립트는 읽기 전용으로만 연다. (R15 예외 두 가지만 허용: ① `scripts/statusline.mjs` 가 `~/.claude/agent-ui/` 폴더를 만들고 그 안의 `rate-limits.json`, `statusline-input.json`(`--dump` 일 때만)과 그 임시 파일만 쓰기·삭제 ② 메인 에이전트가 4.3 절차로 `settings.json` 에 `statusLine` 키 1개 추가)
 - 실제 트랜스크립트를 테스트 픽스처로 복사하지 않는다(프롬프트/개인정보 포함). 픽스처는 손으로 쓴 가짜 데이터만 쓴다.
 - 같은 `message.id` 의 여러 줄 usage 를 모두 더하지 않는다(토큰이 수 배로 부풀어 오른다). message.id 당 마지막 값 1회만 합산한다. turns 도 줄 수가 아니라 고유 message.id 수로 센다.
@@ -821,6 +922,14 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 - (R15) 한도를 `Run`, SSE `snapshot`/`update` 페이로드, `SessionWatcher` 에 넣지 않는다. 별도 SSE 이벤트도 만들지 않는다(3.9 의 `GET /api/limits` 하나).
 - (R15) 남은 시간을 서버 시각으로 계산해 보내지 않는다. 클라이언트가 `resetsAtMs - Date.now()` 로 1초마다 계산한다. 1초 타이머에서 `/api/limits` 를 요청하지 않는다(요청은 `LIMITS_POLL_MS` 간격만).
 - (R15) `buildLimits`/`renderGoal` 에서 `innerHTML` 을 쓰지 않는다. `public/js/limits.js` 모듈 최상위에서 `document` 에 접근하지 않는다.
+- (R16) judge 를 다시 하단 단일 박스로 모으거나 최신 judge 만 그리고 나머지를 숨기지 않는다. judge 카드용 별도 빌더·별도 행을 만들지 않는다(역할 클래스 `box judge` 와 CSS 변수 `--role-color` 만으로 구분). 구조 서명에 judgeId 를 다시 넣지 않는다(판정 노드가 바뀔 때마다 플로우 DOM 이 재생성돼 애니메이션이 끊김).
+- (R16) 줄바꿈된 카드의 연결선을 usage 에서 직접 그어 윗줄 카드를 가로지르게 두지 않는다. 연결선 출발점을 카드 인덱스·열 수 계산(`i % cols` 등)으로 정하지 않는다(카드 폭이 가변이라 열 수가 고정이 아님). 반드시 실제 `getBoundingClientRect` 위치로 고른다.
+- (R16/R17) judge 분류 목록을 `flow.js`·`panels.js`·`agents.js` 에 하드코딩하지 않는다. 역할은 서버가 `cfg.judgeAgentTypes` 로 정해 `role` 필드로 내려준다.
+- (R17) `/api/agents` 경로를 요청(URL·쿼리·헤더)으로 만들지 않는다. `agentsDir` CLI 옵션을 추가하지 않는다. 서버가 `~/.claude/agents/` 에 쓰지 않는다.
+- (R17) 프런트매터 파싱을 위해 YAML 라이브러리를 추가하지 않는다. 등록 목록에 프롬프트 본문(프런트매터 뒤 내용)이나 `tools` 등 name/description/model 외 필드를 내려보내지 않는다. description 은 서버에서 200자로 자른다.
+- (R17) 파일 하나를 못 읽었다고 목록 전체를 실패시키거나 500 을 내지 않는다(그 항목만 건너뜀). 폴더가 없으면 404 가 아니라 `200 { agents: [] }`.
+- (R17) 프로젝트별 `.claude/agents/`, 플러그인 에이전트 폴더를 읽지 않는다(1장 비목표). 등록 목록을 SSE/Run 에 넣거나 클라이언트 타이머로 폴링하지 않는다. 변경 감지가 필요해지면 `LimitsReader` 같은 서버 쪽 mtime 캐시로 하고 이 문서를 먼저 고친다.
+- (R17) 접힘 상태를 DOM 에서 읽어 복원하지 않는다(1초마다 패널을 다시 만들므로 사라짐). `localStorage` 접근을 `try/catch` 없이 하지 않는다(저장소 차단 환경에서 모듈 로드가 실패함). 접기/펴기 때 `renderGoal` 전체를 다시 호출하지 않는다.
 - (R15) 스크립트가 다른 프로젝트 파일(`src/…`)을 import 하거나 서버가 `scripts/statusline.mjs` 를 import 하지 않는다(스크립트는 단일 파일로 독립 실행, 두 쪽의 스키마 호환은 13b end-to-end 테스트로 보장). 테스트가 실제 `~/.claude/agent-ui` 에 쓰지 않는다(자식 프로세스는 `USERPROFILE`/`HOME` 을 임시 폴더로, 함수 테스트는 `dir` 인자로).
 
 ## 6. 결정 기록
@@ -834,7 +943,7 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 | 서버에서 파생 상태 계산(reducer), 클라이언트는 렌더만 | 원본 레코드를 그대로 브라우저로 보내 클라이언트에서 계산 | 원문 노출 최소화(5장), 테스트를 Node 에서 순수 함수로 가능, 대용량 세션 전송 회피 |
 | 전송 단위 = 매 update 마다 Run 전체 + 새 이벤트만 | JSON patch 차분 | Run 은 노드 수십 개 수준이라 작음. 차분 로직 버그 위험 제거 |
 | goal = 첫 사람 프롬프트, latest = 마지막 사람 프롬프트 | 마지막 프롬프트만 goal 로 | 레퍼런스의 "목표"는 세션 전체 조건이라 첫 요청이 더 가까움. 현재 작업은 latest 로 함께 보임 (8장 질문 2) |
-| judge = `agentType` 이 설정 목록(`judge`, `reviewer`, `verifier`)에 속하는 서브에이전트 | 별도 모델을 쓰는 서브에이전트를 judge 로 / judge 생략 | 사용자 파이프라인(설계→구현→검토)의 검토자가 판정 역할에 해당. 모델 기준은 워커도 다른 모델을 쓸 수 있어 오분류. 설정으로 바꿀 수 있음 |
+| judge = `agentType` 이 설정 목록(기본 `judge`, `reviewer`, `verifier`, `tester`, `security-reviewer`. R16/R17 에서 `tester`, `security-reviewer` 추가)에 속하는 서브에이전트 | 별도 모델을 쓰는 서브에이전트를 judge 로 / judge 생략 | 사용자 파이프라인(설계→구현→검토)의 검토자가 판정 역할에 해당. 모델 기준은 워커도 다른 모델을 쓸 수 있어 오분류. 설정으로 바꿀 수 있음 |
 | 중간 레이어 = 모델별 output 토큰 막대 | 도구 호출 수 막대 / 박스 생략 | 레퍼런스의 막대 그래프 자리를 실제 데이터로 채우면서 "모델" 주제와 일치 (8장 질문 3) |
 | 테두리 = 역할 색, 모델 배지 = 패밀리 색 | 모델 패밀리 색 하나로 통일 | 범례(역할)를 레퍼런스대로 유지하면서 같은 역할 안에서도 모델 차이가 보임 (8장 질문 4) |
 | 포트 8770 | 8765/8766 | graph-flow 가 사용 중 |
@@ -856,6 +965,12 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 | (R15) 표시 = 잔여 내림, 사용 = 100 − 잔여, 수준 판정은 내림 전 값 | 반올림 표시 | 잔여를 과대 표시하지 않고, `19% left` 가 보이면 항상 warn 색 — 숫자와 색이 어긋나지 않음 |
 | (R15) 막대 = 사용한 만큼 왼쪽→오른쪽으로 채우고 색은 잔여 수준(녹색/주황/빨강), 남은 부분은 줄무늬 트랙. 글자는 `N% left` 유지 | 남은 양을 채우는 줄어드는 막대 | 사용자 요청(2026-10-29): 줄어드는 막대 대신 사용량이 차오르는 일반 진행 막대. 잔여 확인은 `% left` 글자와 색이 맡는다 |
 | (R15) 스크립트 단일 파일, 서버는 자체 검증(`normalizeLimits`) | 공통 스키마 모듈을 둘이 import | 사용자 요구(단일 파일·독립 실행). 스키마 중복은 필드 4개 수준이고 end-to-end 테스트가 호환을 보장 |
+| (R16) judge = 워커 행에서 실행마다 카드 1개(파란 테두리), 단일 judge 박스 폐기 | (A) 기존 단일 박스 + `previous: N`: 검토를 여러 번 돌리면 이전 실행의 상태·모델·활동이 보이지 않음. (B) judge 전용 하단 행에 카드 나열: 행이 하나 더 생기고 연결선(워커→judge)이 카드 수의 곱으로 늘어남 | 사용자 요청. 같은 빌더·같은 행을 재사용해 코드가 줄고(`pickJudge` 삭제), 역할은 테두리 색으로 충분히 구분. 판정 문구는 goal 패널 verdict 행이 계속 담당 |
+| (R16) 줄바꿈 카드의 연결선 = 위 줄에서 가로 중심이 가장 가까운 카드에서 시작 | (A) 모두 usage 에서: 아래 줄 선이 윗줄 카드를 가로지름. (B) 열 인덱스 계산: 카드 폭 가변이라 열이 고정이 아님 | 실제 렌더 좌표만으로 결정, 추가 상태 없음. 3줄 이상에서 두 줄 위 카드를 고를 수 있는 한계는 3.11 에 기록 |
+| (R17) 등록 에이전트 = 별도 `GET /api/agents`, 페이지 로드 시 1회, 서버 캐시 없음 | (A) SSE snapshot 에 포함: 세션과 무관한 전역 값이 Run 스키마에 섞임. (B) 클라이언트 폴링/서버 mtime 캐시: 등록 변경은 드물어 비용 대비 이득 없음 | 가장 단순. 파일 수십 개 수준이라 요청 시 직접 읽어도 부담 없음. 필요해지면 `LimitsReader` 방식 mtime 캐시로 확장(1장 비목표) |
+| (R17) 프런트매터 = 자체 최소 파서(한 줄 `key: value`, 따옴표 한 쌍 제거, `\|`/`>` 블록 접기) | YAML 라이브러리 | 의존성 0 원칙. 필요한 키는 name/description/model 3개뿐이고 실제 에이전트 파일의 description 이 블록 스칼라·따옴표를 쓰는 경우를 덮음 |
+| (R17) 역할 분류 = 에이전트 name 에 `classifyRole` | 프런트매터의 별도 필드 | Claude Code 의 `subagent_type` 이 에이전트 name 이라 서브에이전트 노드 분류(3.3)와 같은 결과. 설정 하나(`judgeAgentTypes`)로 두 곳이 일치 |
+| (R17) 접힘 상태 = `panels.js` 모듈 변수 + `localStorage`(try/catch) | DOM 속성에 보관 / 서버 저장 | 패널이 1초마다 다시 만들어져 DOM 보관은 사라짐. 새로고침 후 유지는 사용자 편의, 저장소 차단 시에도 동작 |
 
 ## 7. 구현 단계
 
@@ -876,8 +991,8 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 | 10d | `src/server/http.js`: `isAllowedHost` export, handler 최상단 Host 검증(403), `server.address().port` 사용 | `test/http.test.js` Host 항목 통과. 기존 http 테스트(fetch/http.get 이 `127.0.0.1:<port>` Host 를 보냄) 전부 계속 통과 |
 | 10e | `src/config.js`: `/^\d+$/` 정수 파서, `--port` 0~65535, `--poll-ms` ≥ 1, 에러 메시지 3.10 대로 | `test/config.test.js` 통과. `node src/server/main.js --port 70000` 실행 시 stderr 에 `agent-ui: invalid value for --port: 70000`, 종료 코드 1 |
 | 10f | `src/core/session-watcher.js`: `poll()`·flush·stale 재확인 try/catch, `lastPollError` 기반 로그 1회/복구 1회 | `test/watcher.test.js` 의 poll 예외 항목 통과 |
-| 10g | `public/js/format.js` `fmtTokens` 규칙 교체, `public/js/flow.js` `pickJudge` export 및 사용, 모델 막대 값 `fmtTokens` | `test/format.test.js` 경계 항목, `test/flow.test.js` 통과. 수동: model usage 막대 값이 `12.3k` 형식 |
-| 10h | 전체 회귀 | `npm test` 전부 통과(기존 + 11 신규). 실제 세션으로 서버 기동해 콘솔 에러 0, 로그 ts 순, judge 박스 판정 문구 표시 |
+| 10g | `public/js/format.js` `fmtTokens` 규칙 교체, `public/js/flow.js` `pickJudge` export 및 사용, 모델 막대 값 `fmtTokens` | `test/format.test.js` 경계 항목, `test/flow.test.js` 통과. 수동: model usage 막대 값이 `12.3k` 형식. (R16 에서 `pickJudge`·`test/flow.test.js` 삭제, 14단계가 대체) |
+| 10h | 전체 회귀 | `npm test` 전부 통과(기존 + 11 신규). 실제 세션으로 서버 기동해 콘솔 에러 0, 로그 ts 순, judge 박스 판정 문구 표시(R16 이후: goal 패널 verdict 행에 판정 문구 표시) |
 | 11 | 누락 테스트 추가(10a~10g 와 함께 작성) | 아래 목록 각 항목이 독립 `test(...)` 로 존재하고 통과 |
 | 12a | (R14) `src/core/reducer.js`: 비공개 `wakeMain`, `notificationTarget` 추가. `isHumanPrompt` 분기의 두 줄을 `wakeMain(state)` 로 교체 | `grep -n 'turnEnded = false\|status = "running"' src/core/reducer.js` 에서 main 관련 대입이 `wakeMain` 본문에만 있다(서브에이전트 노드의 `node.status = "running"` 2곳, `ensureNode(..., "running")` 은 그대로). 기존 `npm test` 전부 통과 |
 | 12b | (R14) `assistant` 분기에 (W1), `user` 알림 분기에 (W2) 적용(3.5 의 위치·순서대로) | 7.2 테스트 전부 통과. 기존 픽스처 테스트의 `main.status === "idle"`, `turn_end` 1회 단언(`test/reducer.test.js` 91·98행)이 수정 없이 통과 |
@@ -891,6 +1006,12 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 | 13f | (R15) `panels.js` `renderGoal` 4번째 인자, `app.js` 폴링, `styles.css` | `npm test` 전부 통과. `grep -n innerHTML public/js/limits.js public/js/panels.js` 0건. 수동(픽스처 값으로 `~/.claude/agent-ui/rate-limits.json` 대신 `cfg.limitsFile` 을 임시 파일로 지정한 서버, 또는 13h 실제 값): tokens 행 바로 아래 5h/7d 두 행, 잔여 % 굵게, `resets in …` 이 1초마다 줄어듦. 그 임시 한도 파일의 five_hour `usedPercentage` 를 손으로 85, 95 로 고쳐 저장하면 5초 안에 각각 주황, 빨강. 창 폭을 줄여도 goal 패널(300px) 안에서 가로 스크롤·넘침 없음. 파일 삭제 시 `n/a` + Pro/Max 사유 |
 | 13g | (R15) **메인 에이전트**: 사용자 승인 후 4.3 절차로 `statusLine` 적용 | 백업 파일 존재·원본과 바이트 동일, 4.3 의 5 검증 (a)(b) 통과. 구현자는 이 단계를 수행하지 않는다 |
 | 13h | (R15) 실계정 검증(메인 에이전트 + 사용자) | Pro/Max 로그인 세션에서 응답 1회 후: 터미널 상태 줄에 `5h N% left · 7d M% left`, `~/.claude/agent-ui/rate-limits.json` 생성, 값이 Claude Code `/usage` 또는 claude.ai 사용량 화면과 ±1%p 이내, agent-ui 화면 표시 일치. 파일이 생기지 않으면 4.3 의 `--dump` 로 잠시 전환해 `statusline-input.json` 의 실제 `rate_limits` 형태를 확인하고, 문서와 다르면 **설계 공백**으로 architect 에 보고(구현자가 임의 수정하지 않음). 확인 후 `--dump` 제거 |
+| 14a | (R16, 완료 `051bfc3`) `public/js/flow.js`: judge 를 워커 행 카드로, 단일 judge 박스·`pickJudge` 삭제, 서명에서 judgeId 제거, usage→각 카드 연결선과 줄바꿈 카드 출발점 규칙(3.11). `public/styles.css` `.box.judge`. `test/flow.test.js` 삭제 | `npm test` 전부 통과. `grep -rn pickJudge public test` 0건. `grep -n "judge" public/js/flow.js` 에 단일 judge 박스 생성 코드 없음. 수동: reviewer 를 2회 이상 돌린 세션에서 judge 카드가 실행 수만큼 파란 테두리로 보이고, 창 폭을 줄여 카드가 2줄이 되면 둘째 줄 카드의 선이 첫 줄 카드 아래에서 시작해 카드를 가로지르지 않음 |
+| 14b | (R16, 완료) `src/config.js` 기본 `judgeAgentTypes` 에 `tester` 추가, `test/config.test.js` 기본값 단언 갱신 | `test/config.test.js` 통과 |
+| 14c | (R16, 구현됨) 3.11 "알려진 한계" 수정: 출발 후보를 `b.top` 보다 위 줄 중 `bottom` 이 가장 큰 줄의 카드로 좁힘 | 수동: 카드가 3줄 이상일 때 셋째 줄 카드의 선이 둘째 줄 카드에서 시작. 구현 완료: 후보를 바로 위 줄(`bottom` 이 가장 큰 줄)의 카드로 한정 |
+| 15a | (R17, 완료 `ca9ecc8` + 보강) `src/core/agents.js`(3.15), `test/agents.test.js` | 7.4 A1~A5 통과 |
+| 15b | (R17, 완료) `src/config.js` `agentsDir`·`security-reviewer`, `src/server/http.js` `/api/agents`, `test/http.test.js`(`cfg.agentsDir` 임시 폴더) | 7.4 A6~A7 통과, 기존 http 테스트 전부 통과. `loadConfig([]).agentsDir === defaultAgentsDir()`, `loadConfig([]).judgeAgentTypes` 가 5개 기본값 |
+| 15c | (R17, 완료) `public/js/panels.js` `renderGoal` 5번째 인자·`buildAgents`, `public/js/app.js` `loadAgents`, `public/styles.css` `.g-agents`/`.ag-*` | `npm test` 전부 통과. `grep -n innerHTML public/js/panels.js` 0건. 수동: goal 패널 맨 아래 `REGISTERED AGENTS (N)`, judge 계열 이름 파랑·나머지 초록, 행 마우스오버 시 description 툴팁. `−` 클릭 시 목록 숨김·버튼 `+`, 1초 뒤에도 유지, 새로고침 후에도 유지. 서버를 `/api/agents` 404 로 막으면 패널 없음, 다른 영역 정상 |
 
 ### 7.1 11단계 테스트 목록
 
@@ -906,7 +1027,7 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 | 〃 | LogIndex 중복 | 이미 본 seq 이하 add → `op:'drop'`, size 불변 |
 | 〃 | LogIndex MAX_ROWS | maxRows=3 에 4번째 append → `evict:1`, size 3. 가득 찬 상태에서 모든 행보다 이른 이벤트 → `op:'drop'`. 중간 삽입 → `op:'insert'`, `evict:1` |
 | 〃 | LogIndex reset | 5개 reset(maxRows 3) → 반환 길이 3, ts 순 마지막 3개. 이후 add 의 무효 ts 는 reset 집합의 마지막 유효 키 상속 |
-| `test/flow.test.js` | pickJudge | judge 2개 + worker 1개인 Run(verdict.judgeId = 늦은 judge) → `latest.id` = 늦은 judge, `previous` 1. judge 0개 → `{latest:null, previous:0}` |
+| ~~`test/flow.test.js`~~ | ~~pickJudge~~ | **R16 에서 삭제**(함수와 파일 모두 없음). 최신 judge 선택은 아래 reducer 항목(`verdict.judgeId`)이 계속 검증한다 |
 | `test/reducer.test.js` | judge 여러 개 최신 선택 | startedAt 다른 reviewer 2개 → `verdict.judgeId` = 늦은 것. startedAt null(pending) judge 가 있으면 그것 |
 | 〃 | judge agent_done verdict | 완료 알림을 handback 보다 먼저 적용해도, 나중에 적용해도 이벤트 verdict === `"done"`, 그리고 handback 적용 후 `toRunView().verdict.text` = handback 첫 줄 |
 | 〃 | 동기 Agent 결과 | 메인 Agent tool_use(id `t1`, subagent_type `implementer`) → user tool_result(`tool_use_id:"t1"`) + `toolUseResult:{agentId:"s1", status:"completed"}` → 노드 s1 `completed`, agentType `implementer`, spawnedAtMainTurn = 해당 시점 main.turns, `agent_done` 이벤트 verdict `"done"`. `is_error:true` 면 `failed`/`agent_failed`/`"failed"` |
@@ -984,12 +1105,28 @@ export function buildLimits(view /* LimitsView */) /* : HTMLElement */          
 | V11 | 〃 | nowMs 비정상 | `nowMs = NaN` → `error` 처리(note `LIMIT_NOTES.error`), throw 없음 |
 | V12 | 〃 | 순수성 | 같은 입력 객체로 2회 호출 → 결과 deep-equal, 입력 객체 불변(`structuredClone` 비교) |
 
+### 7.4 15단계 테스트 목록 (R17)
+
+공통: `node:test` + `node:assert/strict`. 파일 I/O 는 `fs.mkdtempSync(path.join(os.tmpdir(), "agent-ui-agents-"))` 임시 폴더만. 실제 `~/.claude/agents` 를 읽는 테스트는 없다. `test/agents.test.js` 의 judge 목록은 상수 `["judge","reviewer","verifier","tester"]` 를 넘긴다.
+
+| # | 파일 | 테스트 | 단언 |
+|---|---|---|---|
+| A1 | `test/agents.test.js` | parseFrontmatter 기본 | `"---\nname: a\r\nmodel: claude-opus-5-5\n---\nbody: x"` → `{name:"a", model:"claude-opus-5-5"}`(CRLF 혼용 허용, 본문의 `body:` 무시). 프런트매터 없음 → `{}` |
+| A2 | 〃 | parseFrontmatter 따옴표·블록 | `name: "my-agent"` → `my-agent`, `model: 'opus'` → `opus`, `description: \|` + 들여쓴 두 줄 → `"첫 줄 둘째 줄"`, `tools: >-` + 들여쓴 두 줄 → `"Read, Grep"`, 블록 뒤 `next: x` 는 별도 키 `"x"` |
+| A3 | 〃 | listAgents 정렬·분류 | 임시 폴더에 `reviewer.md`(name·description·model opus), `coder.md`(name 없음), `notes.txt` → 이름 `["coder","reviewer"]`, coder `role "worker"`·`model null`, reviewer `role "judge"`·`model {family:"opus", label:"opus 5.5"}`, txt 무시 |
+| A4 | 〃 | listAgents 폴더 없음 | 없는 경로 → `[]`, throw 없음 |
+| A5 | 〃 | listAgents 절단·건너뜀 | description 500자 → 길이 200. `dir.md` 라는 이름의 **디렉터리**(읽기 실패) → 건너뛰고 나머지(`long`)만 반환 |
+| A6 | `test/http.test.js` | GET /api/agents | `cfg.agentsDir` = 임시 폴더(`reviewer.md`: name reviewer, model opus), `cfg.judgeAgentTypes` = `DEFAULTS` 값 → 200, `agents.length === 1`, `agents[0].name === "reviewer"`, `role === "judge"` |
+| A7 | 〃 | 하위 경로 404 | `/api/agents/x` → 404 |
+
 ## 8. 열린 질문 (결정 완료)
 
-> 결정: 1~5 모두 아래 제안/기본값대로 채택. judge 없는 세션은 흐린 `judge: n/a` 박스로 둔다. 나중에 수정 가능. 2026-10-29 리뷰 반영(R1~R13)에서 새로 생긴 열린 질문은 없다.
+> 결정: 1~5 모두 아래 제안/기본값대로 채택. judge 없는 세션은 흐린 `judge: n/a` 박스로 둔다. 나중에 수정 가능. **(R16 정정)** 단일 judge 박스 자체가 폐기되어 judge 없는 세션에는 judge 카드가 없고 goal 패널에 `verdict n/a`, `judge: n/a` 만 보인다. 질문 1 의 기본 목록은 R16/R17 에서 `judge, reviewer, verifier, tester, security-reviewer` 로 바뀌었다. 2026-10-29 리뷰 반영(R1~R13)에서 새로 생긴 열린 질문은 없다.
 >
 > R14 에서 범위 밖으로 결정한 것(구현자가 채우지 않는다): (1) 알림으로 깬 턴의 goal 패널 running 시간은 마지막 사람 프롬프트 기준 그대로 둔다(턴 시작 시각 필드 추가는 Run 스키마 변경이라 별도 승인 필요). (2) `<synthetic>` assistant 나 사용자 중단 뒤 종료 레코드가 없는 턴을 idle 로 돌리는 규칙은 두지 않는다(기존과 같이 30분 뒤 stale).
 
+> R16·R17 에서 새 열린 질문은 없다(사후 문서화). 범위 밖으로 둔 것: 프로젝트별 `.claude/agents`·플러그인 에이전트 표시, 등록 목록 폴링, 3줄 이상 카드 연결선 한계 수정(7장 14c, 선택).
+>
 > R15 에서 새 열린 질문은 없다(사용자 요구와 승인 범위 안에서 모두 결정). 다만 아래는 **사용자가 알아야 할 위험/제약**이며 구현자가 채우는 항목이 아니다:
 > - 구독자 전용: `rate_limits` 는 claude.ai Pro/Max 로그인에서만, 세션의 첫 API 응답 후에만 온다. API 키 사용자·첫 응답 전에는 계속 `n/a`.
 > - 실계정 미검증: 필드 형태는 공식 문서 기준이다. 실제 값의 단위(`resets_at` 초/ms)·윈도우별 `resets_at` 흔들림 여부는 13h 에서 확인한다. 다르면 설계 공백으로 architect 에 돌린다.

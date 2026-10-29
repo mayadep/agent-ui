@@ -24,7 +24,8 @@ npm start
 
 ## 화면 구성
 - 헤더·범례: 세션 제목과 projectKey, 역할 색 범례(goal 주황, 메인 보라, judge 파랑, 워커 초록). 상단 선택 박스로 세션을 고른다.
-- THE GOAL 패널(좌측): 맨 아래 REGISTERED AGENTS 에 `~/.claude/agents/*.md` 로 등록한 에이전트 목록(역할 색, 모델, 설명은 마우스오버)이 보인다. 현재 turn·모델, 목표(첫 사람 프롬프트)와 latest, turns, tokens, 사용 한도, verdict, 실행 시간.
+- THE GOAL 패널(좌측): 현재 turn·모델, 목표(첫 사람 프롬프트)와 latest, turns, tokens, 사용 한도, verdict, 실행 시간.
+- REGISTERED AGENTS(좌측 하단): `~/.claude/agents/*.md` 로 등록한 에이전트 목록(역할 색, 모델, 설명은 마우스오버). `+`/`−` 버튼으로 접고 펴며, 목록은 페이지를 열 때 한 번 읽으므로 새로 등록하면 새로고침한다. 프로젝트별 `.claude/agents` 와 플러그인 에이전트는 표시하지 않는다.
 - 플로우 다이어그램(중앙): main 에이전트 박스 → model usage(모델별 output 토큰 막대) → 서브에이전트 카드(워커·judge 모두 실행마다 하나씩, judge는 파란 테두리). 실행 중인 노드는 테두리가 빛나고 연결선에 점이 흐른다.
 - session log(하단): 이벤트를 시각 순으로 표시한다.
 - 모델 배지 글자색: opus 보라, sonnet 하늘, haiku 연두, 그 외 회색(원본 이름 표시). 박스 테두리는 모델이 아닌 역할 색이다.

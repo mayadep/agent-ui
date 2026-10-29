@@ -28,3 +28,21 @@ test("listAgents: 이름순, 역할·모델 분류, 이름 없으면 파일명, 
 test("listAgents: 디렉터리가 없으면 빈 배열", () => {
   assert.deepEqual(listAgents(path.join(os.tmpdir(), "agent-ui-no-such-dir"), JUDGES), []);
 });
+
+test("parseFrontmatter: 따옴표 값은 벗기고 | > 블록 값은 이어 붙인다", () => {
+  const fm = parseFrontmatter('---\nname: "my-agent"\ndescription: |\n  첫 줄\n  둘째 줄\nmodel: \'opus\'\ntools: >-\n  Read,\n  Grep\nnext: x\n---\n');
+  assert.equal(fm.name, "my-agent");
+  assert.equal(fm.description, "첫 줄 둘째 줄");
+  assert.equal(fm.model, "opus");
+  assert.equal(fm.tools, "Read, Grep");
+  assert.equal(fm.next, "x");
+});
+
+test("listAgents: description 은 200자로 자르고 읽을 수 없는 항목은 건너뛴다", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agent-ui-agents-"));
+  fs.writeFileSync(path.join(dir, "long.md"), `---\nname: long\ndescription: ${"가".repeat(500)}\n---\n`);
+  fs.mkdirSync(path.join(dir, "dir.md")); // 파일이 아니라 디렉터리 → 읽기 실패
+  const list = listAgents(dir, JUDGES);
+  assert.deepEqual(list.map((a) => a.name), ["long"]);
+  assert.equal(list[0].description.length, 200);
+});

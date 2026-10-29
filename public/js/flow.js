@@ -165,7 +165,9 @@ function layoutLinks(container, refs) {
     if (l.from === refs.usageBox) {
       // 줄바꿈으로 아래 줄에 내려간 카드는 usage 가 아니라 바로 위 줄의 가장 가까운 카드에서 선을 이어 카드를 가로지르지 않게 한다.
       const cx = b.left + b.width / 2;
-      const above = cards.filter((r) => r.bottom <= b.top + 1 && r.top < b.top - 1);
+      const upper = cards.filter((r) => r.bottom <= b.top + 1 && r.top < b.top - 1);
+      const rowBottom = Math.max(...upper.map((r) => r.bottom));
+      const above = upper.filter((r) => Math.abs(r.bottom - rowBottom) <= 1); // 바로 위 줄만
       if (above.length) a = above.reduce((m, r) => (Math.abs(r.left + r.width / 2 - cx) < Math.abs(m.left + m.width / 2 - cx) ? r : m));
     }
     const x1 = a.left + a.width / 2 - cr.left + container.scrollLeft;
